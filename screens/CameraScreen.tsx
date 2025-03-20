@@ -1,10 +1,12 @@
-import PhotoPreviewSection from '@/components/PhotoPreviewSection';
+import React from 'react';
+
 import { AntDesign } from '@expo/vector-icons';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { useRef, useState } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import PhotoPreviewSection from './PhotoPreviewScreen';
 
-export default function Camera() {
+export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
 
@@ -93,3 +95,5 @@ const styles = StyleSheet.create({
     color: 'white',
   },
 });
+
+

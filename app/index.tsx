@@ -1,23 +1,13 @@
+import { View, Text } from 'react-native'
+import React from 'react'
+import AppNavigator from '@/navigation/AppNavigator';
 
-import { Ionicons } from '@expo/vector-icons';
-import { Link, router } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+// const index = () => {
+//   return <AppNavigator />;
+// }
 
-const Index = () => {
-    return (
-        <View>
-            <Text>Index</Text>
-            <TouchableOpacity onPress={() =>router.navigate('/camera')} className=' items-center'>
-                    <Ionicons name="person-outline" size={24} color="black" />
-                    <Text>Camera</Text>
-                </TouchableOpacity>
-
-                
-                <Link href={'/camera'} className=' my-2'>Category Screen</Link>
-        </View>
-    );
+export default function index() {
+  return <AppNavigator />;
 }
 
-const styles = StyleSheet.create({})
-
-export default Index;
+// export default index
