@@ -67,7 +67,7 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation }) => {
                 )}
             />
 
-            <TouchableOpacity style={styles.manualButton}>
+            <TouchableOpacity style={styles.manualButton} onPress={()=>navigation.navigate('ManuallyAddItem')}>
                 <Text style={styles.buttonText}>Add Items Manually</Text>
             </TouchableOpacity>
 

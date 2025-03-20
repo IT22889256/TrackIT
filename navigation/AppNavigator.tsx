@@ -11,6 +11,7 @@ import ChangePasswordScreen from '@/screens/ChangePasswordScreen';
 import ReportsScreen from '@/screens/ReportScreen';
 import CameraScreen from '@/screens/CameraScreen';
 import ScannedItemsScreen from '@/screens/ScannedItemsScreen';
+import ManuallyAddItem from '@/screens/ManuallyAddItemScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -22,6 +23,7 @@ export type RootStackParamList = {
   Reports:undefined;
   Camera: undefined;
   ScannedItems: undefined;
+  ManuallyAddItem: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -39,6 +41,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Reports" component={ReportsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Camera" component={CameraScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ScannedItems" component={ScannedItemsScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ManuallyAddItem" component={ManuallyAddItem} options={{ headerShown: false }} />
         
       </Stack.Navigator>
     
