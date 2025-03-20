@@ -48,7 +48,10 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
         <Text style={styles.title}>My Profile</Text>
-        <TouchableOpacity style={styles.headerButton}>
+        <TouchableOpacity 
+          style={styles.headerButton}
+          onPress={() => navigation.navigate('EditProfile')} // Navigate to EditProfileScreen
+        >
           <Ionicons name="create-outline" size={24} color="black" />
         </TouchableOpacity>
       </View>
@@ -60,14 +63,20 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.userName}>{userName}</Text>
           <Text style={styles.email}>{email}</Text>
         </View>
-        <TouchableOpacity style={styles.editButton}>
+        <TouchableOpacity 
+          style={styles.editButton}
+          onPress={() => navigation.navigate('EditProfile')} // Navigate on button press
+        >
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
       </View>
 
       {/* Options */}
       <View style={styles.options}>
-        <TouchableOpacity style={styles.optionItem}>
+        <TouchableOpacity 
+          style={styles.optionItem}
+          onPress={() => navigation.navigate('Reports')} // Navigate to ReportsScreen
+        >
           <Text style={styles.optionText}>Reports</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.optionItem}>
@@ -147,7 +156,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   removeButton: {
-    backgroundColor: '#6750A4',
+    backgroundColor: '#cf1f1f',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',

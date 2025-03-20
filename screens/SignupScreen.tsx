@@ -1,5 +1,5 @@
 // src/screens/SignupScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { auth, db } from '../firebaseConfig'; // Import auth and db
+import { auth, db } from '../firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore'; // Import Firestore functions
+import { doc, setDoc } from 'firebase/firestore';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { Ionicons } from '@expo/vector-icons';
 
 type SignupScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -28,10 +29,19 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const passwordInputRef = useRef<TextInput>(null);
 
   const handleSignup = async () => {
     if (password !== confirmPassword) {
       Alert.alert('Passwords do not match');
+      return;
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (passwordValidation) {
+      setPasswordError(passwordValidation);
       return;
     }
 
@@ -43,17 +53,34 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
       );
       const user = userCredential.user;
 
-      // Create a user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         name: name,
         email: email,
-        // Add any other user data you want to store
       });
 
-      navigation.navigate('Login'); // Navigate to the main app screen after successful signup
+      navigation.navigate('Main');
     } catch (error: any) {
       Alert.alert('Signup Failed', error.message);
     }
+  };
+
+  const validatePassword = (password: string) => {
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters long.';
+    }
+    if (!/[a-z]/.test(password)) {
+      return 'Password must contain at least one lowercase letter.';
+    }
+    if (!/[A-Z]/.test(password)) {
+      return 'Password must contain at least one uppercase letter.';
+    }
+    if (!/\d/.test(password)) {
+      return 'Password must contain at least one number.';
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return 'Password must contain at least one special character.';
+    }
+    return '';
   };
 
   return (
@@ -75,21 +102,40 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
         keyboardType="email-address"
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Enter your password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <Text style={styles.passwordHint}>One lowercase character</Text>
+      <View style={styles.passwordContainer}>
+        <TextInput
+          style={[styles.input, styles.passwordInput]} // Apply passwordInput style
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!passwordVisible}
+          ref={passwordInputRef}
+        />
+        <TouchableOpacity
+          style={styles.passwordToggle}
+          onPress={() => setPasswordVisible(!passwordVisible)}
+        >
+          <Ionicons
+            name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+            size={24}
+            color="gray"
+          />
+        </TouchableOpacity>
+      </View>
+      {passwordError ? (
+        <Text style={styles.errorText}>{passwordError}</Text>
+      ) : (
+        <Text style={styles.passwordHint}>
+          One lowercase character
+        </Text>
+      )}
 
       <TextInput
         style={styles.input}
         placeholder="Confirm your password"
         value={confirmPassword}
         onChangeText={setConfirmPassword}
-        secureTextEntry
+        secureTextEntry={!passwordVisible}
       />
 
       <TouchableOpacity style={styles.button} onPress={handleSignup}>
@@ -143,6 +189,25 @@ const styles = StyleSheet.create({
   loginText: {
     marginTop: 20,
     textAlign: 'center',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    position: 'relative',
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 5,
+  },
+  passwordInput: {
+    flex: 1, // Make the TextInput take up available space
   },
 });
 

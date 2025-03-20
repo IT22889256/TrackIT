@@ -6,12 +6,18 @@ import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen'; 
 import HomeScreen from '@/screens/HomeScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
+import EditProfileScreen from '@/screens/EditProfileScreen';
+import ChangePasswordScreen from '@/screens/ChangePasswordScreen';
+import ReportsScreen from '@/screens/ReportScreen';
 
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   Main: undefined;
   Profile:undefined;
+  EditProfile:undefined;
+  ChangePassword:undefined;
+  Reports:undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -24,6 +30,9 @@ const AppNavigator = () => {
         <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Main" component={HomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Reports" component={ReportsScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     
   );
