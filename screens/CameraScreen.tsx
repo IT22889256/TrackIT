@@ -1,68 +1,60 @@
-import React from 'react';
-
-import { AntDesign } from '@expo/vector-icons';
+import React, { useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Button, SafeAreaView } from 'react-native';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { useRef, useState } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PhotoPreviewSection from './PhotoPreviewScreen';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '@/types';
+
+type CameraScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Profile'>;
 
 export default function CameraScreen() {
+  const navigation = useNavigation<CameraScreenNavigationProp>(); // ✅ Get navigation
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
+  const [photo, setPhoto] = useState<any>(null);
+  const cameraRef = useRef<CameraView | null>(null);
 
-  const [photo, setPhoto] = useState<any>(null)
-  const cameraRef = useRef<CameraView | null>(null)
-
-  if (!permission) {
-    // Camera permissions are still loading.
-    return <View />;
-  }
-
+  if (!permission) return <View />;
   if (!permission.granted) {
-    // Camera permissions are not granted yet.
     return (
       <View style={styles.container}>
         <Text style={styles.message}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="grant permission" />
+        <Button onPress={requestPermission} title="Grant Permission" />
       </View>
     );
   }
 
-  function toggleCameraFacing() {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  }
-
-
-  const handleTakePhoto =  async () => {
+  const handleTakePhoto = async () => {
     if (cameraRef.current) {
-        const options = {
-            quality: 1,
-            base64: true,
-            exif: false,
-        };
-        const takedPhoto = await cameraRef.current.takePictureAsync(options);
-
-        setPhoto(takedPhoto);
+      const options = { quality: 1, base64: true, exif: false };
+      const takedPhoto = await cameraRef.current.takePictureAsync(options);
+      setPhoto(takedPhoto);
     }
-  }; 
+  };
 
   const handleRetakePhoto = () => setPhoto(null);
-
-  if (photo) return <PhotoPreviewSection photo={photo} handleRetakePhoto={handleRetakePhoto} />
+  if (photo) return <PhotoPreviewSection photo={photo} handleRetakePhoto={handleRetakePhoto} />;
 
   return (
-    <View style={styles.container}>
-      <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-            <AntDesign name='retweet' size={44} color='black' />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={handleTakePhoto}>
-            <AntDesign name='camera' size={44} color='black' />
-          </TouchableOpacity>
-        </View>
-      </CameraView>
-    </View>
+    <SafeAreaView style={styles.container}>
+      {/* Go Back Button (Now inside a View to ensure visibility) */}
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.goBackButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="white" />
+        </TouchableOpacity>
+      </View>
+
+      <CameraView style={styles.camera} facing={facing} ref={cameraRef} />
+
+      {/* Capture Button Centered */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.captureButton} onPress={handleTakePhoto}>
+          <AntDesign name="camera" size={30} color="black" />
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -70,30 +62,38 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'black',
   },
   message: {
     textAlign: 'center',
     paddingBottom: 10,
+    color: 'white',
   },
   camera: {
     flex: 1,
+    width: '100%',
   },
   buttonContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
-    margin: 64,
+    position: 'absolute',
+    bottom: 40,
+    width: '100%',
+    alignItems: 'center', // Centers the button horizontally
   },
-  button: {
-    flex: 1,
-    alignSelf: 'flex-end',
-    alignItems: 'center',
+  captureButton: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 50,
   },
-  text: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+  topBar: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 10, // Ensures it appears above the camera
+  },
+  goBackButton: {
+    padding: 10,
+ 
   },
 });
-
 
