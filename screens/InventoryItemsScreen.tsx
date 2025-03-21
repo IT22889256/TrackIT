@@ -69,7 +69,7 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
 
                             <View style={styles.rightSection}>
                                 <TouchableOpacity>
-                                    <Text style={styles.moreText}>more {'>>'}</Text>
+                                    <Text style={styles.moreText}>Reminder {'>>'}</Text>
                                 </TouchableOpacity>
                                 {expiryDays !== null ? (
                                     <Text style={styles.expiryText}>{expiryDays} Days</Text>

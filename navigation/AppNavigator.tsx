@@ -20,6 +20,8 @@ import AddMemberScreen from '@/screens/AddMemberScreen';
 
 import ShoppingListScreen from '@/screens/ShoppligListScreen';
 import AddItemsScreen from '@/screens/AddItemsScreen';
+import BudgetListScreen from '@/screens/BudgetListScreen';
+import EnterBudgetScreen from '@/screens/EnterBudgetScreen';
 
 
 export type RootStackParamList = {
@@ -40,6 +42,8 @@ export type RootStackParamList = {
  
   ShoppingList:undefined;
   AddItems:undefined;
+  BudgetList:undefined;
+  EnterBudget: undefined;
 
 };
 
@@ -66,6 +70,9 @@ const AppNavigator = () => {
        
         <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AddItems" component={AddItemsScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="BudgetList" component={BudgetListScreen} options={{ headerShown: false }} />
+        
+        <Stack.Screen name="EnterBudget" component={EnterBudgetScreen} options={{ headerShown: false }} />
 
         
 
