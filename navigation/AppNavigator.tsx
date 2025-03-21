@@ -12,6 +12,7 @@ import ReportsScreen from '@/screens/ReportScreen';
 import CameraScreen from '@/screens/CameraScreen';
 import ScannedItemsScreen from '@/screens/ScannedItemsScreen';
 import ManuallyAddItem from '@/screens/ManuallyAddItemScreen';
+import InventoryItemsScreen from '@/screens/InventoryItemsScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -24,6 +25,7 @@ export type RootStackParamList = {
   Camera: undefined;
   ScannedItems: undefined;
   ManuallyAddItem: undefined;
+  InventoryItems: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -42,6 +44,9 @@ const AppNavigator = () => {
         <Stack.Screen name="Camera" component={CameraScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ScannedItems" component={ScannedItemsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ManuallyAddItem" component={ManuallyAddItem} options={{ headerShown: false }} />
+        
+        <Stack.Screen name="InventoryItems" component={InventoryItemsScreen} options={{ headerShown: false }} />
+
         
       </Stack.Navigator>
     

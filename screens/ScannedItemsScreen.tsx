@@ -73,7 +73,7 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation }) => {
 
             <Text style={styles.orText}>OR</Text>
 
-            <TouchableOpacity style={styles.inventoryButton}>
+            <TouchableOpacity style={styles.inventoryButton} onPress={()=>navigation.navigate('InventoryItems')}>
                 <Text style={styles.buttonText}>Add to Inventory</Text>
             </TouchableOpacity>
         </View>
