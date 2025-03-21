@@ -9,10 +9,18 @@ import ProfileScreen from '@/screens/ProfileScreen';
 import EditProfileScreen from '@/screens/EditProfileScreen';
 import ChangePasswordScreen from '@/screens/ChangePasswordScreen';
 import ReportsScreen from '@/screens/ReportScreen';
+
 import CameraScreen from '@/screens/CameraScreen';
 import ScannedItemsScreen from '@/screens/ScannedItemsScreen';
 import ManuallyAddItem from '@/screens/ManuallyAddItemScreen';
 import InventoryItemsScreen from '@/screens/InventoryItemsScreen';
+
+import MembersScreen from '@/screens/MemberScreen';
+import AddMemberScreen from '@/screens/AddMemberScreen';
+
+import ShoppingListScreen from '@/screens/ShoppligListScreen';
+import AddItemsScreen from '@/screens/AddItemsScreen';
+
 
 export type RootStackParamList = {
   Login: undefined;
@@ -22,10 +30,17 @@ export type RootStackParamList = {
   EditProfile:undefined;
   ChangePassword:undefined;
   Reports:undefined;
+
   Camera: undefined;
   ScannedItems: undefined;
   ManuallyAddItem: undefined;
   InventoryItems: undefined;
+
+  Members:undefined;
+ 
+  ShoppingList:undefined;
+  AddItems:undefined;
+
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -46,8 +61,12 @@ const AppNavigator = () => {
         <Stack.Screen name="ManuallyAddItem" component={ManuallyAddItem} options={{ headerShown: false }} />
         
         <Stack.Screen name="InventoryItems" component={InventoryItemsScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Members" component={MembersScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="AddMember" component={AddMemberScreen} options={{ headerShown: false }} />
+       
+        <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="AddItems" component={AddItemsScreen} options={{ headerShown: false }} />
 
-        
       </Stack.Navigator>
     
   );
