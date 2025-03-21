@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
@@ -352,3 +353,4 @@ const styles = StyleSheet.create({
 });
 
 export default SignupScreen;
+

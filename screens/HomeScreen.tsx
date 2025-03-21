@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -103,8 +104,8 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 >
                     <Ionicons name="home-outline" size={24} color="#555" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
-                    <View style={styles.scanIcon}>
+                <TouchableOpacity style={styles.navItem}  onPress={() => navigation.navigate('Camera')}>
+                    <View style={styles.scanIcon} >
                         <Ionicons name="scan-outline" size={36} color="#555" />
                     </View>
                 </TouchableOpacity>
