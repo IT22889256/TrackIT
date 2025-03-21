@@ -29,7 +29,7 @@ const LabelPreviewSection: React.FC<Props> = ({ photo, handleRetakePhoto }) => {
             </View>
 
             {/* Upload Button */}
-            <TouchableOpacity style={styles.uploadButton} onPress={() => navigation.navigate('Reminder')}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => navigation.navigate('LabelManualEdit')}>
                 <Text style={styles.uploadButtonText}>Upload</Text>
             </TouchableOpacity>
         </SafeAreaView>

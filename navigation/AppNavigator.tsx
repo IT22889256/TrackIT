@@ -11,6 +11,7 @@ import ChangePasswordScreen from '@/screens/ChangePasswordScreen';
 import ReportsScreen from '@/screens/ReportScreen';
 import ReminderScreen from '@/screens/ReminderScreen';
 import LabelScan from '@/screens/LabelScan';
+import LabelManualEdit from '@/screens/LabelManualEdit';
 
 
 export type RootStackParamList = {
@@ -26,6 +27,7 @@ export type RootStackParamList = {
   AddReminder: undefined;
   LabelScan: undefined;
   LabelPreview: { photo: any };
+  LabelManualEdit: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -43,6 +45,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Reports" component={ReportsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Reminder" component={ReminderScreen} options={{ headerShown: false }} />
         <Stack.Screen name="LabelScan" component={LabelScan} options={{ headerShown: false }} />
+        <Stack.Screen name='LabelManualEdit' component={LabelManualEdit} options={{ headerShown: false }} />
       </Stack.Navigator>
     
   );
