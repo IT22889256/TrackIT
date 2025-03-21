@@ -9,6 +9,10 @@ import ProfileScreen from '@/screens/ProfileScreen';
 import EditProfileScreen from '@/screens/EditProfileScreen';
 import ChangePasswordScreen from '@/screens/ChangePasswordScreen';
 import ReportsScreen from '@/screens/ReportScreen';
+import ReminderScreen from '@/screens/ReminderScreen';
+import LabelScan from '@/screens/LabelScan';
+import LabelManualEdit from '@/screens/LabelManualEdit';
+
 
 import CameraScreen from '@/screens/CameraScreen';
 import ScannedItemsScreen from '@/screens/ScannedItemsScreen';
@@ -31,6 +35,14 @@ export type RootStackParamList = {
   ChangePassword:undefined;
   Reports:undefined;
 
+  Reminder: undefined;
+  EditReminder: { reminderId: string };
+  AddReminder: undefined;
+  LabelScan: undefined;
+  LabelPreview: { photo: any };
+  LabelManualEdit: undefined;
+
+
   Camera: undefined;
   ScannedItems: undefined;
   ManuallyAddItem: undefined;
@@ -40,6 +52,7 @@ export type RootStackParamList = {
  
   ShoppingList:undefined;
   AddItems:undefined;
+
 
 };
 
@@ -56,6 +69,9 @@ const AppNavigator = () => {
         <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Reports" component={ReportsScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Reminder" component={ReminderScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="LabelScan" component={LabelScan} options={{ headerShown: false }} />
+        <Stack.Screen name='LabelManualEdit' component={LabelManualEdit} options={{ headerShown: false }} />
         <Stack.Screen name="Camera" component={CameraScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ScannedItems" component={ScannedItemsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ManuallyAddItem" component={ManuallyAddItem} options={{ headerShown: false }} />
