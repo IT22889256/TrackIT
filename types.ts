@@ -8,4 +8,6 @@ export type RootStackParamList = {
     Reports: undefined;
     Members: undefined;
     AddItems: undefined;
+    EditItems:undefined;
+    ShoppingList:undefined;
   };
