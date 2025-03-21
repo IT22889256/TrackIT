@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "562674376018",
+    "project_id": "trackit-3e5e3",
+    "storage_bucket": "trackit-3e5e3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:562674376018:android:23ba2772367f3fdbe76e8b",
+        "android_client_info": {
+          "package_name": "com.trackit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCj_Qbr7hUYg9n4ih1t66Pr_ZHmX44E9_8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,13 +1,12 @@
 import { View, Text } from 'react-native'
 import React from 'react'
-import './global.css';
 
-const index = () => {
-  return (
-    <View>
-      <Text>index</Text>
-    </View>
-  )
+import AppNavigator from '@/navigation/AppNavigator';
+
+
+export default function index() {
+  return <AppNavigator />;
 }
 
-export default index
+
+
