@@ -218,7 +218,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
                         onPress={() => setPasswordVisible(!passwordVisible)}
                     >
                         <Ionicons
-                            name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+                            name={passwordVisible ? 'eye-outline' : 'eye-off-outline'}
                             size={24}
                             color="#666"
                         />

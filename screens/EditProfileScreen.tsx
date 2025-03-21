@@ -1,4 +1,3 @@
-// src/screens/EditProfileScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -12,8 +11,9 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
-import { auth, db } from '../firebaseConfig'; // Import auth and db
-import { doc, getDoc, updateDoc } from 'firebase/firestore'; // Import Firestore functions
+import { auth, db } from '../firebaseConfig';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { useFonts } from 'expo-font';
 
 type EditProfileScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -27,8 +27,12 @@ type Props = {
 const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(true);
+  const [fontsLoaded] = useFonts({
+    // 'InterBold': require('../assets/fonts/Inter-Bold.ttf'),
+    // 'InterRegular': require('../assets/fonts/Inter-Regular.ttf'),
+    // 'InterMedium': require('../assets/fonts/Inter-Medium.ttf'),
+  });
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -60,7 +64,6 @@ const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
     try {
       if (auth.currentUser) {
         const userDocRef = doc(db, 'users', auth.currentUser.uid);
-        //  password should not be stored directly in Firestore.
         const updateData: {
           name: string;
           email: string;
@@ -72,7 +75,7 @@ const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         await updateDoc(userDocRef, updateData);
 
         Alert.alert('Success', 'Profile updated successfully!');
-        navigation.goBack(); // Go back to the profile screen
+        navigation.goBack();
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -83,7 +86,15 @@ const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Loading...</Text>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -96,14 +107,14 @@ const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
           style={styles.headerButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="black" />
+          <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.title}>Edit Profile</Text>
         <TouchableOpacity
           style={styles.headerButton}
           onPress={handleUpdateProfile}
         >
-          <Ionicons name="checkmark-outline" size={24} color="black" />
+          <Ionicons name="checkmark-outline" size={24} color="#333" />
         </TouchableOpacity>
       </View>
 
@@ -118,6 +129,7 @@ const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
           placeholder="Enter your name"
           value={name}
           onChangeText={setName}
+          placeholderTextColor="#BDBDBD"
         />
 
         <Text style={styles.label}>Email Address</Text>
@@ -127,15 +139,23 @@ const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
+          placeholderTextColor="#BDBDBD"
         />
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.changePasswordButton}
-          onPress={() => navigation.navigate('ChangePassword')} // Navigate to ChangePasswordScreen
+          onPress={() => navigation.navigate('ChangePassword')}
         >
           <Text style={styles.changePasswordButtonText}>Change Password</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity
+        style={styles.updateButton}
+        onPress={handleUpdateProfile}
+      >
+        <Text style={styles.updateButtonText}>Update Profile</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -143,22 +163,32 @@ const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#F5FCFF',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: 'InterRegular',
+    color: '#333',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
+    fontFamily: 'InterBold',
     fontWeight: 'bold',
+    color: '#333',
   },
   headerButton: {
     padding: 8,
@@ -176,38 +206,45 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
+    fontFamily: 'InterMedium',
     fontWeight: 'bold',
-    marginTop: 10,
+    color: '#333',
+    marginTop: 15,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    marginTop: 5,
+    borderColor: '#BDBDBD',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    fontFamily: 'InterRegular',
+    color: '#333',
   },
   updateButton: {
-    backgroundColor: '#6750A4',
+    backgroundColor: '#007BFF',
     padding: 15,
-    borderRadius: 5,
+    borderRadius: 8,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 30,
     marginHorizontal: 20,
   },
   updateButtonText: {
     color: 'white',
     fontWeight: 'bold',
+    fontFamily: 'InterMedium',
+    fontSize: 16,
   },
   changePasswordButton: {
-    backgroundColor: '#6750A4', // Change this to the desired color
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 15,
-    alignSelf: 'flex-start' // Align to the start, you can change as per your design
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 20,
+    alignSelf: 'flex-start',
   },
   changePasswordButtonText: {
-    color: 'white',
+    color: '#007BFF',
     fontWeight: 'bold',
+    fontFamily: 'InterMedium',
+    fontSize: 14,
   },
 });
 
