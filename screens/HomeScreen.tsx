@@ -80,7 +80,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 <View style={styles.smallBoxes}>
                     <TouchableOpacity
                         style={[styles.smallBox, styles.button]}
-                        onPress={() => navigation.navigate('Inventory')}
+                        onPress={() => navigation.navigate('InventoryItems')}
                     >
                         <Ionicons name="archive-outline" size={30} color="#007BFF" />
                         <Text style={styles.buttonText}>Inventory</Text>

@@ -67,6 +67,8 @@ const AppNavigator = () => {
         <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AddItems" component={AddItemsScreen} options={{ headerShown: false }} />
 
+        
+
       </Stack.Navigator>
     
   );

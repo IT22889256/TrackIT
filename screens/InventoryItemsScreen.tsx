@@ -1,3 +1,4 @@
+import Footer from '@/components/Footer';
 import { RootStackParamList } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -76,10 +77,13 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                                     <Text style={styles.expiryText}>Add Expiry Date</Text>
                                 )}
                             </View>
+                           
                         </View>
+                        
                     );
                 }}
             />
+             <Footer navigation={navigation} />
         </View>
     );
 };
