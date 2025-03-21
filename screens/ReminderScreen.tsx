@@ -143,7 +143,8 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
       />
 
       <TouchableOpacity style={styles.addItemButton}>
-        <Text style={styles.buttonText}>Add Item</Text>
+        <Text style={styles.buttonText}
+         onPress={() => navigation.navigate('LabelScan')}>Add Item</Text>
       </TouchableOpacity>
     </View>
   );
