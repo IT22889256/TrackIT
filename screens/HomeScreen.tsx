@@ -1,10 +1,8 @@
-// src/screens/HomeScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
-
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
@@ -13,11 +11,16 @@ type Props = {
 };
 
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
+  const handleExpirySoonItemsPress = () => {
+    // Navigate to the 'Reminder' screen when the expiry soon items box is pressed
+    navigation.navigate('Reminder');
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.logo}>LOGO</Text>
+        <Text style={styles.logo}>TrackIT</Text>
         <TouchableOpacity style={styles.notificationIcon}>
           <Ionicons name="notifications-outline" size={24} color="black" />
         </TouchableOpacity>
@@ -27,10 +30,22 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.content}>
         <View style={styles.largeBox}></View>
         <View style={styles.smallBoxes}>
-          <View style={styles.smallBox}></View>
-          <View style={styles.smallBox}></View>
+          {/* Left Small Box (Packages) */}
+          <View style={styles.smallBox}>
+            <Text style={styles.emoji}>📦</Text>  {/* Emoji representing a package */}
+            <Text style={styles.boxLabel}>Inventory</Text>
+          </View>
+
+          {/* Right Small Box (Expiry Soon Items) */}
+          <TouchableOpacity style={styles.smallBox} onPress={handleExpirySoonItemsPress}>
+            <Text style={styles.emoji}>⏰</Text>  {/* Emoji representing expiry items */}
+            <Text style={styles.boxLabel}>Expiry Soon Items</Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.smallBox}></View>
+        <View style={styles.smallBox}>
+          <Text style={styles.emoji}>📦</Text>  {/* Emoji representing a package */}
+          <Text style={styles.boxLabel}>Shopping List</Text>
+        </View>
       </View>
 
       {/* Bottom Navigation */}
@@ -48,7 +63,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigation.navigate('Profile')} // Navigate to ProfileScreen
+          onPress={() => navigation.navigate('Reminder')} // Navigate to ProfileScreen
         >
           <Ionicons name="person-outline" size={24} color="black" />
         </TouchableOpacity>
@@ -94,6 +109,18 @@ const styles = StyleSheet.create({
     height: 100,
     backgroundColor: '#E0E0E0',
     marginHorizontal: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 10,
+  },
+  emoji: {
+    fontSize: 30,
+  },
+  boxLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 8,
   },
   bottomNav: {
     flexDirection: 'row',
