@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -6,13 +5,11 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font'; // Import the hook
 
-// Placeholder types, replace with your actual types
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
 type Props = {
     navigation: HomeScreenNavigationProp;
 };
-
 // Dummy components for now, will create separate files later
 const InventoryScreen = ({ navigation }: { navigation: any }) => (
     <View style={styles.container}>
@@ -47,6 +44,7 @@ const ShoppingListScreen = ({ navigation }: { navigation: any }) => (
         <Text style={{fontFamily: 'InterRegular'}}>Shopping List Screen</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={{fontFamily: 'InterRegular'}}>Go Back</Text>
+
         </TouchableOpacity>
     </View>
 );
@@ -55,6 +53,10 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     const [fontsLoaded] = useFonts({  // Load the font
          // Make sure the path is correct
     });
+     const handleExpirySoonItemsPress = () => {
+    // Navigate to the 'Reminder' screen when the expiry soon items box is pressed
+    navigation.navigate('Reminder');
+    };
 
     if (!fontsLoaded) {
         return (
@@ -91,6 +93,13 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                     >
                         <Ionicons name="cart-outline" size={30} color="#28A745" />
                         <Text style={styles.buttonText}>Shopping List</Text>
+                    </TouchableOpacity>
+                  <TouchableOpacity
+                        style={[styles.smallBox, styles.button]}
+                        onPress={handleExpirySoonItemsPress}}
+                    >
+                        <Ionicons name="cart-outline" size={30} color="#28A745" />
+                        <Text style={styles.buttonText}>Expiry Soon Items</Text>
                     </TouchableOpacity>
                 </View>
                 <View style={styles.smallBox}></View>
