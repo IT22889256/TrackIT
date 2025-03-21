@@ -1,12 +1,16 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated } from 'react-native';
+
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '../firebaseConfig';
+
 import { deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
 import { useFonts } from 'expo-font';
+
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Profile'>;
 
