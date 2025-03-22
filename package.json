@@ -40,11 +40,7 @@
     "expo-web-browser": "~14.0.2",
 
     "firebase": "^11.4.0",
-<<<<<<< HEAD
     "framer-motion": "^12.5.0",
-=======
-    "nativewind": "^4.1.23",
->>>>>>> e6a5188fd45266669a7a655b64f6af34ce54ab62
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-native": "0.76.7",
