@@ -1,8 +1,9 @@
 // ShoppingListScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import ItemDetailsScreen from './ItemDetailsScreen';
 
 interface Item {
     id: string;
@@ -14,26 +15,30 @@ interface Item {
 
 const ShoppingListScreen = () => {
     const [items, setItems] = useState<Item[]>([]);
+    const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
     const navigation = useNavigation();
     const route = useRoute();
 
     useEffect(() => {
-        if (route.params?.newItem) {
+        if (route.params?.newItems) {
             setItems((prevItems) => {
-                const newItem = route.params.newItem;
-                const existingItemIndex = prevItems.findIndex((item) => item.id === newItem.id);
+                const newItems = route.params.newItems;
+                const updatedItems = [...prevItems];
 
-                if (existingItemIndex !== -1) {
-                    const updatedItems = [...prevItems];
-                    updatedItems[existingItemIndex] = newItem;
-                    return updatedItems;
-                } else {
-                    return [...prevItems, newItem];
-                }
+                newItems.forEach(newItem => {
+                    const existingItemIndex = updatedItems.findIndex((item) => item.id === newItem.id);
+                    if (existingItemIndex !== -1) {
+                        updatedItems[existingItemIndex] = newItem;
+                    } else {
+                        updatedItems.push(newItem);
+                    }
+                });
+                return updatedItems;
             });
         }
         console.log("ShoppingListScreen Items: ", items);
-    }, [route.params?.newItem]);
+    }, [route.params?.newItems]);
 
     const handleAddItem = () => {
         navigation.navigate('AddItems');
@@ -60,31 +65,37 @@ const ShoppingListScreen = () => {
     };
 
     const renderItem = ({ item }: { item: Item }) => (
-        <TouchableOpacity onPress={() => navigation.navigate('ItemDetails', { item })}>
-            <View style={styles.itemContainer}>
-                <Text style={styles.itemName}>Item: {item.name}</Text>
+        <TouchableOpacity
+            style={styles.itemCard}
+            onPress={() => {
+                setSelectedItem(item);
+                setModalVisible(true);
+            }}
+        >
+            <Text style={styles.itemName}>{item.name}</Text>
+            <View style={styles.itemActions}>
                 <TouchableOpacity
                     style={styles.editButton}
                     onPress={() => navigation.navigate('EditItems', { item, updateItem: handleUpdateItem })}
                 >
-                    <Ionicons name="pencil" size={24} color="white" />
+                    <Ionicons name="pencil" size={24} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.deleteButton} onPress={() => handleRemoveItem(item.id)}>
-                    <Ionicons name="close" size={24} color="white" />
+                    <Ionicons name="close" size={24} color="#fff" />
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>
     );
 
     const handleGoBack = () => {
-        navigation.navigate('HomeScreen');
+        navigation.navigate('Main'); // Navigate to HomeScreen
     };
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-                    <Ionicons name="arrow-back" size={24} color="black" />
+                    <Ionicons name="arrow-back" size={24} color="#000" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Shopping List</Text>
             </View>
@@ -97,8 +108,19 @@ const ShoppingListScreen = () => {
             />
 
             <TouchableOpacity style={styles.addButton} onPress={handleAddItem}>
-                <Ionicons name="add" size={36} color="white" />
+                <Ionicons name="add" size={36} color="#fff" />
             </TouchableOpacity>
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                {selectedItem && (
+                    <ItemDetailsScreen item={selectedItem} onClose={() => setModalVisible(false)} />
+                )}
+            </Modal>
         </View>
     );
 };
@@ -106,52 +128,60 @@ const ShoppingListScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#f4f4f4',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: '#ddd',
     },
     backButton: {
         marginRight: 16,
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
     },
     list: {
         flex: 1,
         padding: 16,
     },
-    itemContainer: {
+    itemCard: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#6750A4',
+        backgroundColor: '#fff',
         padding: 16,
         borderRadius: 8,
-        marginBottom: 8,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 3,
     },
     itemName: {
-        flex: 1,
-        color: 'white',
-        fontSize: 16,
+        fontSize: 18,
+        fontWeight: '500',
+    },
+    itemActions: {
+        flexDirection: 'row',
     },
     editButton: {
-        backgroundColor: '#523E90',
+        backgroundColor: '#6750A4',
         padding: 8,
         borderRadius: 8,
         marginRight: 8,
     },
     deleteButton: {
-        backgroundColor: '#523E90',
+        backgroundColor: '#d32f2f',
         padding: 8,
         borderRadius: 8,
     },
     addButton: {
-        backgroundColor: 'black',
+        backgroundColor: '#6750A4',
         borderRadius: 36,
         width: 72,
         height: 72,

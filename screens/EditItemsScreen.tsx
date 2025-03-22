@@ -67,6 +67,10 @@ const EditItemsScreen = () => {
     setQuantity((prevQuantity) => (prevQuantity > 0 ? prevQuantity - 1 : 0));
   };
 
+  const handleGoBack = () => {
+    navigation.navigate('ShoppingList'); // Navigate to HomeScreen
+};
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>

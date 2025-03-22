@@ -43,6 +43,10 @@ const AddItemsScreen = () => {
         navigation.navigate('ShoppingList', { newItems: [newItem] }); // Send as an array
     };
 
+    const handleGoBack = () => {
+      navigation.navigate('ShoppingList'); // Navigate to HomeScreen
+  };
+  
     const incrementQuantity = () => {
         setQuantity((prevQuantity) => prevQuantity + 1);
     };
