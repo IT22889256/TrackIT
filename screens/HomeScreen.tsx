@@ -70,17 +70,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                         <Text style={styles.buttonText}>Expiry Items</Text>
                     </TouchableOpacity>
                 </View>
-                {/* Budget Shopping List Section */}
-                <View style={styles.budgetSection}>
-                    <Text style={styles.noteText}>Generate Budget Shopping List</Text>
-                    <TouchableOpacity 
-                        style={styles.generateButton} 
-                        // onPress={() => navigation.navigate('EnterBudget')}
-                    >
-                        <Text style={styles.buttonText}>Generate</Text>
-                    </TouchableOpacity>
-
-                </View>
+                
 
                 {/* Budget Shopping List Section */}
                 <View style={styles.budgetSection}>
