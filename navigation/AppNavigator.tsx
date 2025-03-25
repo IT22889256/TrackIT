@@ -34,7 +34,7 @@ export type RootStackParamList = {
   Reports:undefined;
 
   Camera: undefined;
-  ScannedItems: undefined;
+  ScannedItems: { scannedItems: any };
   ManuallyAddItem: undefined;
   InventoryItems: undefined;
 
