@@ -121,7 +121,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                         onPress={togglePasswordVisibility}
                     >
                         <Ionicons
-                            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                            name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                             size={24}
                             color="#666"
                         />

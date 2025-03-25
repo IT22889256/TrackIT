@@ -29,6 +29,9 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [secureCurrentPassword, setSecureCurrentPassword] = useState(true);
+  const [secureNewPassword, setSecureNewPassword] = useState(true);
+  const [secureConfirmNewPassword, setSecureConfirmNewPassword] = useState(true);
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmNewPassword) {
@@ -91,31 +94,67 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
       {/* Input Fields */}
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Current Password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your current password"
-          value={currentPassword}
-          onChangeText={setCurrentPassword}
-          secureTextEntry
-        />
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your current password"
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            secureTextEntry={secureCurrentPassword}
+          />
+          <TouchableOpacity
+            style={styles.eyeIcon}
+            onPress={() => setSecureCurrentPassword(!secureCurrentPassword)}
+          >
+            <Ionicons
+              name={secureCurrentPassword ? 'eye-off' : 'eye'}
+              size={24}
+              color="gray"
+            />
+          </TouchableOpacity>
+        </View>
 
         <Text style={styles.label}>New Password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your new password"
-          value={newPassword}
-          onChangeText={setNewPassword}
-          secureTextEntry
-        />
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your new password"
+            value={newPassword}
+            onChangeText={setNewPassword}
+            secureTextEntry={secureNewPassword}
+          />
+          <TouchableOpacity
+            style={styles.eyeIcon}
+            onPress={() => setSecureNewPassword(!secureNewPassword)}
+          >
+            <Ionicons
+              name={secureNewPassword ? 'eye-off' : 'eye'}
+              size={24}
+              color="gray"
+            />
+          </TouchableOpacity>
+        </View>
 
         <Text style={styles.label}>Confirm New Password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm your new password"
-          value={confirmNewPassword}
-          onChangeText={setConfirmNewPassword}
-          secureTextEntry
-        />
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm your new password"
+            value={confirmNewPassword}
+            onChangeText={setConfirmNewPassword}
+            secureTextEntry={secureConfirmNewPassword}
+          />
+          <TouchableOpacity
+            style={styles.eyeIcon}
+            onPress={() => setSecureConfirmNewPassword(!secureConfirmNewPassword)}
+          >
+            <Ionicons
+              name={secureConfirmNewPassword ? 'eye-off' : 'eye'}
+              size={24}
+              color="gray"
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Change Password Button */}
@@ -161,11 +200,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   input: {
+    flex: 1,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
     padding: 10,
-    marginTop: 5,
   },
   changePasswordButton: {
     backgroundColor: '#6750A4',
@@ -178,6 +217,17 @@ const styles = StyleSheet.create({
   changePasswordButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+  },
+  eyeIcon: {
+    padding: 10,
   },
 });
 
