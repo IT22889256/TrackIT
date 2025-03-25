@@ -57,7 +57,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.smallBox, styles.button]}
-                        onPress={() => navigation.navigate('AddItems')}
+                        onPress={() => navigation.navigate('ShoppingList')}
                     >
                         <Ionicons name="cart-outline" size={30} color="#28A745" />
                         <Text style={styles.buttonText}>Shopping List</Text>
