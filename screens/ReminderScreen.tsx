@@ -101,6 +101,10 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
         <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Main')}>
+        <Ionicons name="home-outline" size={24} color="#333" />
+      </TouchableOpacity>
+
       <Text style={styles.title}>Expiry Soon Items</Text>
       <Text style={styles.note}>
         Swipe Right to delete, swipe left to add to shopping cart.
@@ -166,184 +170,100 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-
 const styles = StyleSheet.create({
-
-    container: {
-  
-      flex: 1,
-  
-      backgroundColor: '#f5f5f5', // Soft background color for modern feel
-  
-      paddingHorizontal: 20,
-  
-      paddingTop: 40,
-  
-    },
-  
-    backButton: {
-  
-      position: 'absolute',
-  
-      top: 20,
-  
-      left: 20,
-  
-    },
-  
-    title: {
-  
-      fontSize: 28,
-  
-      fontWeight: '700',
-  
-      color: '#333',
-  
-      textAlign: 'center',
-  
-      marginBottom: 10,
-  
-    },
-  
-    note: {
-  
-      fontSize: 16,
-  
-      color: '#888',
-  
-      textAlign: 'center',
-  
-      marginBottom: 20,
-  
-    },
-  
-    itemContainer: {
-  
-      flexDirection: 'row',
-  
-      paddingVertical: 15,
-  
-      paddingHorizontal: 20,
-  
-      backgroundColor: 'white',
-  
-      borderRadius: 12,
-  
-      marginBottom: 15,
-  
-      shadowColor: '#000',
-  
-      shadowOffset: { width: 0, height: 1 },
-  
-      shadowOpacity: 0.1,
-  
-      shadowRadius: 3,
-  
-      elevation: 3,
-  
-      alignItems: 'center',
-  
-    },
-  
-    itemContent: {
-  
-      flex: 1,
-  
-    },
-  
-    itemName: {
-  
-      fontSize: 18,
-  
-      fontWeight: '600',
-  
-      color: '#333',
-  
-    },
-  
-    itemExpireDate: {
-  
-      fontSize: 14,
-  
-      color: 'black',
-  
-      marginTop: 5,
-  
-    },
-  
-    checkboxContainer: {
-  
-      paddingLeft: 10,
-  
-    },
-  
-    leftAction: {
-  
-      backgroundColor: '#ff4d4d', // Red background for delete
-  
-      justifyContent: 'center',
-  
-      alignItems: 'flex-end',
-  
-      paddingRight: 20,
-  
-      width: 100,
-  
-      borderRadius: 10,
-  
-    },
-  
-    rightAction: {
-  
-      backgroundColor: '#4CAF50', // Green background for add to cart
-  
-      justifyContent: 'center',
-  
-      alignItems: 'flex-start',
-  
-      paddingLeft: 20,
-  
-      width: 100,
-  
-      borderRadius: 10,
-  
-    },
-  
-    actionText: {
-  
-      color: 'white',
-  
-      fontWeight: '600',
-  
-      fontSize: 16,
-  
-    },
-  
-    addItemButton: {
-  
-      backgroundColor: '#6200ea',
-  
-      paddingVertical: 15,
-  
-      borderRadius: 12,
-  
-      marginVertical: 20,
-  
-      alignItems: 'center',
-  
-    },
-  
-    buttonText: {
-  
-      color: 'white',
-  
-      fontWeight: '700',
-  
-      fontSize: 18,
-  
-    },
-  
-  });
-  
+  container: {
+    flex: 1,
+    backgroundColor: '#E8F8E8', // Light greenish background for the whole screen
+    paddingHorizontal: 20,
+    paddingTop: 40,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  note: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  itemContainer: {
+    flexDirection: 'row',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    alignItems: 'center',
+  },
+  itemContent: {
+    flex: 1,
+  },
+  navItem: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    padding: 8,
+  },
+  itemName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  itemExpireDate: {
+    fontSize: 14,
+    color: 'black',
+    marginTop: 5,
+  },
+  checkboxContainer: {
+    paddingLeft: 10,
+  },
+  leftAction: {
+    backgroundColor: '#ff4d4d', // Red background for delete
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingRight: 20,
+    width: 100,
+    borderRadius: 10,
+  },
+  rightAction: {
+    backgroundColor: '#4CAF50', // Green background for add to cart
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 20,
+    width: 100,
+    borderRadius: 10,
+  },
+  actionText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  addItemButton: {
+    backgroundColor: '#6200ea',
+    paddingVertical: 15,
+    borderRadius: 12,
+    marginVertical: 20,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+});
 
 export default ReminderScreen;
