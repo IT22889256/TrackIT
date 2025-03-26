@@ -33,11 +33,16 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [newPasswordError, setNewPasswordError] = useState('');
   const [confirmNewPasswordError, setConfirmNewPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
+
   const [fontsLoaded] = useFonts({
     // 'InterBold': require('../assets/fonts/Boldonse-Regular.ttf'),
     // 'InterRegular': require('../assets/fonts/SpaceMono-Regular.ttf'),
     // 'InterMedium': require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const [secureCurrentPassword, setSecureCurrentPassword] = useState(true);
+  const [secureNewPassword, setSecureNewPassword] = useState(true);
+  const [secureConfirmNewPassword, setSecureConfirmNewPassword] = useState(true);
+
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -209,87 +214,66 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
       {/* Input Fields */}
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Current Password</Text>
-        <View style={styles.passwordContainer}>
+        <View style={styles.inputWrapper}>
           <TextInput
-            style={[styles.input, styles.passwordInput]}
+            style={styles.input}
             placeholder="Enter your current password"
             value={currentPassword}
             onChangeText={setCurrentPassword}
-            secureTextEntry={!showCurrentPassword}
-            placeholderTextColor="#BDBDBD"
-            onBlur={() => validateCurrentPassword(currentPassword)}
-            ref={currentPasswordInputRef}
+            secureTextEntry={secureCurrentPassword}
           />
           <TouchableOpacity
-            style={styles.passwordToggle}
-            onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+            style={styles.eyeIcon}
+            onPress={() => setSecureCurrentPassword(!secureCurrentPassword)}
           >
             <Ionicons
-              name={showCurrentPassword ? 'eye-outline' : 'eye-off-outline'}
+              name={secureCurrentPassword ? 'eye-off' : 'eye'}
               size={24}
               color="gray"
             />
           </TouchableOpacity>
         </View>
-        {currentPasswordError ? (
-          <Text style={styles.errorText}>{currentPasswordError}</Text>
-        ) : isCurrentPasswordCorrect === true ? (
-          <Text style={styles.successText}>Correct Password</Text>
-        ) : null}
 
         <Text style={styles.label}>New Password</Text>
-        <View style={styles.passwordContainer}>
+        <View style={styles.inputWrapper}>
           <TextInput
-            style={[styles.input, styles.passwordInput]}
+            style={styles.input}
             placeholder="Enter your new password"
             value={newPassword}
             onChangeText={setNewPassword}
-            secureTextEntry={!showNewPassword}
-            placeholderTextColor="#BDBDBD"
-            onBlur={() => validateNewPassword(newPassword)}
-            ref={newPasswordInputRef}
+            secureTextEntry={secureNewPassword}
           />
           <TouchableOpacity
-            style={styles.passwordToggle}
-            onPress={() => setShowNewPassword(!showNewPassword)}
+            style={styles.eyeIcon}
+            onPress={() => setSecureNewPassword(!secureNewPassword)}
           >
             <Ionicons
-              name={showNewPassword ? 'eye-outline' : 'eye-off-outline'}
+              name={secureNewPassword ? 'eye-off' : 'eye'}
               size={24}
               color="gray"
             />
           </TouchableOpacity>
         </View>
-        {newPasswordError ? (
-          <Text style={styles.errorText}>{newPasswordError}</Text>
-        ) : null}
-
         <Text style={styles.label}>Confirm New Password</Text>
-        <View style={styles.passwordContainer}>
+        <View style={styles.inputWrapper}>
           <TextInput
-            style={[styles.input, styles.passwordInput]}
+            style={styles.input}
             placeholder="Confirm your new password"
             value={confirmNewPassword}
             onChangeText={setConfirmNewPassword}
-            secureTextEntry={!showConfirmNewPassword}
-            placeholderTextColor="#BDBDBD"
-            onBlur={() => validateConfirmNewPassword(confirmNewPassword, newPassword)}
-            ref={confirmNewPasswordInputRef}
+            secureTextEntry={secureConfirmNewPassword}
           />
           <TouchableOpacity
-            style={styles.passwordToggle}
-            onPress={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+            style={styles.eyeIcon}
+            onPress={() => setSecureConfirmNewPassword(!secureConfirmNewPassword)}
           >
             <Ionicons
-              name={showConfirmNewPassword ? 'eye-outline' : 'eye-off-outline'}
+              name={secureConfirmNewPassword ? 'eye-off' : 'eye'}
               size={24}
               color="gray"
             />
           </TouchableOpacity>
         </View>
-        {confirmNewPasswordError ? (
-          <Text style={styles.errorText}>{confirmNewPasswordError}</Text>
-        ) : null}
       </View>
 
       {/* Change Password Button */}
@@ -348,14 +332,12 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#BDBDBD',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 8,
-    fontFamily: 'InterRegular',
-    color: '#333',
     flex: 1,
+    borderWidth: 1,
+
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
   },
   changePasswordButton: {
     backgroundColor: '#007BFF',
@@ -396,7 +378,18 @@ const styles = StyleSheet.create({
   passwordInput: {
     flex: 1,
   },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+  },
+  eyeIcon: {
+    padding: 10,
+  },
 });
 
-export default ChangePasswordScreen;
 
+export default ChangePasswordScreen;

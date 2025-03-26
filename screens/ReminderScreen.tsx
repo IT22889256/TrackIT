@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/AppNavigator';
-import { Swipeable } from 'react-native-gesture-handler'; // Import swipeable
+import { Swipeable } from 'react-native-gesture-handler';
+import { getFirestore, collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { app } from '../firebaseConfig'; // Import your Firebase app configuration
+import { auth } from '../firebaseConfig';
 
 type ReminderScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Reminder'>;
 
@@ -15,25 +18,41 @@ type ScannedItem = {
   id: string;
   name: string;
   date: string;
+  uid: string;
 };
 
-const dummyData: ScannedItem[] = [
-  { id: '1', name: 'Yoghurt', date: '2025-03-04' },
-  { id: '2', name: 'Fresh Milk', date: '2025-12-02' },
-  { id: '3', name: 'Cheese', date: '2025-03-10' },
-  { id: '4', name: 'Bread', date: '2025-01-01' },
-  { id: '5', name: 'Eggs', date: '2025-12-05' },
-  { id: '6', name: 'Butter', date: '2025-03-' },
-  { id: '7', name: 'Yoghurt', date: '2025-03-04' },
-  { id: '8', name: 'Fresh Milk', date: '2025-12-02' },
-  { id: '9', name: 'Cheese', date: '2025-12-10' },
-  { id: '10', name: 'Bread', date: '2025-03-04' },
-  { id: '11', name: 'Eggs', date: '2025-12-05' },
-  { id: '12', name: 'Butter', date: '2025-12-09' },
-];
-
 const ReminderScreen: React.FC<Props> = ({ navigation }) => {
+  const [items, setItems] = useState<ScannedItem[]>([]);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const db = getFirestore(app);
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const querySnapshot = await getDocs(collection(db, 'items'));
+          const fetchedItems: ScannedItem[] = [];
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.uid === user.uid) {
+              fetchedItems.push({
+                id: doc.id,
+                name: data.productName,
+                date: data.expiryDate,
+                uid: data.uid,
+              });
+            }
+          });
+          setItems(fetchedItems);
+        } catch (error) {
+          console.error('Error fetching items:', error);
+        }
+      }
+    };
+
+    fetchItems();
+  }, []);
 
   const toggleCheckbox = (id: string) => {
     setCheckedItems((prev) => ({
@@ -42,27 +61,27 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
     }));
   };
 
-  // Helper function to calculate the days difference between the current date and expiry date
   const getDaysUntilExpiration = (expireDate: string): number => {
     const currentDate = new Date();
     const expirationDate = new Date(expireDate);
     const differenceInTime = expirationDate.getTime() - currentDate.getTime();
-    return Math.floor(differenceInTime / (1000 * 3600 * 24)); // Convert to days
+    return Math.floor(differenceInTime / (1000 * 3600 * 24));
   };
 
   const handleDelete = (id: string) => {
-    // Show alert to confirm deletion
     Alert.alert('Delete Item', 'Are you sure you want to delete this item?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', onPress: () => deleteItem(id) },
     ]);
   };
 
-  const deleteItem = (id: string) => {
-    // Remove item from data
-    const updatedData = dummyData.filter(item => item.id !== id);
-    console.log('Updated data after deletion', updatedData);
-    // You can update your state here if you are using state for data
+  const deleteItem = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'items', id));
+      setItems((prevItems) => prevItems.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
   };
 
   const handleAddToShoppingList = (id: string) => {
@@ -74,7 +93,6 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
 
   const addToShoppingList = (id: string) => {
     console.log('Item added to shopping list with ID:', id);
-    // You can add your logic here to add the item to a shopping list
   };
 
   return (
@@ -89,19 +107,18 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
       </Text>
 
       <FlatList
-        data={dummyData}
+        data={items}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           const daysUntilExpiration = getDaysUntilExpiration(item.date);
-          let backgroundColor = 'lightgreen'; // Default green for items that are not close to expiry
+          let backgroundColor = 'lightgreen';
 
-          // Change background color based on the expiration duration
           if (daysUntilExpiration < 7) {
-            backgroundColor = '#d91a20'; // Red for items expiring soon (less than 7 days)
+            backgroundColor = '#d91a20';
           } else if (daysUntilExpiration === 7) {
-            backgroundColor = 'lightyellow'; // Yellow for items expiring in exactly 7 days
+            backgroundColor = 'lightyellow';
           } else {
-            backgroundColor = '#48cf3c'; // Green for items expiring after 7 days
+            backgroundColor = '#48cf3c';
           }
 
           const rightAction = () => (
@@ -120,8 +137,8 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
             <Swipeable
               renderLeftActions={leftAction}
               renderRightActions={rightAction}
-              onSwipeableLeftOpen={() => handleDelete(item.id)}  // Automatically trigger delete on swipe left
-              onSwipeableRightOpen={() => handleAddToShoppingList(item.id)}  // Automatically trigger add to cart on swipe right
+              onSwipeableLeftOpen={() => handleDelete(item.id)}
+              onSwipeableRightOpen={() => handleAddToShoppingList(item.id)}
             >
               <View style={[styles.itemContainer, { backgroundColor }]}>
                 <View style={styles.itemContent}>
@@ -142,102 +159,191 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
         }}
       />
 
-      <TouchableOpacity style={styles.addItemButton}>
-        <Text style={styles.buttonText}
-         onPress={() => navigation.navigate('LabelScan')}>Add Item</Text>
+      <TouchableOpacity style={styles.addItemButton} onPress={() => navigation.navigate('LabelScan')}>
+        <Text style={styles.buttonText}>Add Item</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5', // Soft background color for modern feel
-    paddingHorizontal: 20,
-    paddingTop: 40,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  note: {
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  itemContainer: {
-    flexDirection: 'row',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-    alignItems: 'center',
-  },
-  itemContent: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  itemExpireDate: {
-    fontSize: 14,
-    color: 'black',
-    marginTop: 5,
-  },
-  checkboxContainer: {
-    paddingLeft: 10,
-  },
-  leftAction: {
-    backgroundColor: '#ff4d4d', // Red background for delete
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 20,
-    width: 100,
-    borderRadius: 10,
-  },
-  rightAction: {
-    backgroundColor: '#4CAF50', // Green background for add to cart
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingLeft: 20,
-    width: 100,
-    borderRadius: 10,
-  },
-  actionText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  addItemButton: {
-    backgroundColor: '#6200ea',
-    paddingVertical: 15,
-    borderRadius: 12,
-    marginVertical: 20,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-});
+
+    container: {
+  
+      flex: 1,
+  
+      backgroundColor: '#f5f5f5', // Soft background color for modern feel
+  
+      paddingHorizontal: 20,
+  
+      paddingTop: 40,
+  
+    },
+  
+    backButton: {
+  
+      position: 'absolute',
+  
+      top: 20,
+  
+      left: 20,
+  
+    },
+  
+    title: {
+  
+      fontSize: 28,
+  
+      fontWeight: '700',
+  
+      color: '#333',
+  
+      textAlign: 'center',
+  
+      marginBottom: 10,
+  
+    },
+  
+    note: {
+  
+      fontSize: 16,
+  
+      color: '#888',
+  
+      textAlign: 'center',
+  
+      marginBottom: 20,
+  
+    },
+  
+    itemContainer: {
+  
+      flexDirection: 'row',
+  
+      paddingVertical: 15,
+  
+      paddingHorizontal: 20,
+  
+      backgroundColor: 'white',
+  
+      borderRadius: 12,
+  
+      marginBottom: 15,
+  
+      shadowColor: '#000',
+  
+      shadowOffset: { width: 0, height: 1 },
+  
+      shadowOpacity: 0.1,
+  
+      shadowRadius: 3,
+  
+      elevation: 3,
+  
+      alignItems: 'center',
+  
+    },
+  
+    itemContent: {
+  
+      flex: 1,
+  
+    },
+  
+    itemName: {
+  
+      fontSize: 18,
+  
+      fontWeight: '600',
+  
+      color: '#333',
+  
+    },
+  
+    itemExpireDate: {
+  
+      fontSize: 14,
+  
+      color: 'black',
+  
+      marginTop: 5,
+  
+    },
+  
+    checkboxContainer: {
+  
+      paddingLeft: 10,
+  
+    },
+  
+    leftAction: {
+  
+      backgroundColor: '#ff4d4d', // Red background for delete
+  
+      justifyContent: 'center',
+  
+      alignItems: 'flex-end',
+  
+      paddingRight: 20,
+  
+      width: 100,
+  
+      borderRadius: 10,
+  
+    },
+  
+    rightAction: {
+  
+      backgroundColor: '#4CAF50', // Green background for add to cart
+  
+      justifyContent: 'center',
+  
+      alignItems: 'flex-start',
+  
+      paddingLeft: 20,
+  
+      width: 100,
+  
+      borderRadius: 10,
+  
+    },
+  
+    actionText: {
+  
+      color: 'white',
+  
+      fontWeight: '600',
+  
+      fontSize: 16,
+  
+    },
+  
+    addItemButton: {
+  
+      backgroundColor: '#6200ea',
+  
+      paddingVertical: 15,
+  
+      borderRadius: 12,
+  
+      marginVertical: 20,
+  
+      alignItems: 'center',
+  
+    },
+  
+    buttonText: {
+  
+      color: 'white',
+  
+      fontWeight: '700',
+  
+      fontSize: 18,
+  
+    },
+  
+  });
+  
 
 export default ReminderScreen;
