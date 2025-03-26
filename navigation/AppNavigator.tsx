@@ -48,7 +48,7 @@ export type RootStackParamList = {
   LabelPreview: { photo: any };
   LabelManualEdit: undefined;
   Camera: undefined;
-  ScannedItems: undefined;
+  ScannedItems: { scannedItems: any };
   ManuallyAddItem: undefined;
   InventoryItems: undefined;
   Members:undefined;
