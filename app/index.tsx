@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 
+=======
+>>>>>>> developer
 import React from 'react'
 
 import AppNavigator from '@/navigation/AppNavigator';
