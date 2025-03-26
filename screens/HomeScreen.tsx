@@ -21,6 +21,11 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
          // Make sure the path is correct
     });
 
+    const handleExpirySoonItemsPress = () => {
+        // Navigate to the 'Reminder' screen when the expiry soon items box is pressed
+        navigation.navigate('Reminder');
+        };
+
     if (!fontsLoaded) {
         return (
             <View style={styles.loadingContainer}>
@@ -57,7 +62,26 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                         <Ionicons name="cart-outline" size={30} color="#28A745" />
                         <Text style={styles.buttonText}>Shopping List</Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.smallBox, styles.button]}
+                        onPress={() => navigation.navigate('Reminder')}
+                    >
+                        <Ionicons name="cart-outline" size={30} color="#28A745" />
+                        <Text style={styles.buttonText}>Expiry Items</Text>
+                    </TouchableOpacity>
                 </View>
+                {/* Budget Shopping List Section */}
+                <View style={styles.budgetSection}>
+                    <Text style={styles.noteText}>Generate Budget Shopping List</Text>
+                    <TouchableOpacity 
+                        style={styles.generateButton} 
+                        // onPress={() => navigation.navigate('EnterBudget')}
+                    >
+                        <Text style={styles.buttonText}>Generate</Text>
+                    </TouchableOpacity>
+
+                </View>
+
                 {/* Budget Shopping List Section */}
                 <View style={styles.budgetSection}>
                     <Text style={styles.noteText}>Generate Budget Shopping List</Text>
@@ -68,6 +92,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                         <Text style={styles.buttonText}>Generate</Text>
                     </TouchableOpacity>
                 </View>
+
             </View>
 
             {/* Bottom Navigation */}
