@@ -57,8 +57,7 @@
     "react-native-webview": "13.12.5",
     "tailwindcss": "^3.4.17",
     "tmpl": "^1.0.5",
-    "trackit": "file:",
-    "expo-linear-gradient": "~14.0.2"
+    "trackit": "file:"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

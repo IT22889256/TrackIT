@@ -173,7 +173,7 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E8F8E8', // Light greenish background for the whole screen
+    backgroundColor: '#E8F8E8', // Light greenish background 
     paddingHorizontal: 20,
     paddingTop: 40,
   },
