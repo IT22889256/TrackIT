@@ -1,5 +1,8 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 
+=======
+>>>>>>> developer
 =======
 >>>>>>> developer
 import React from 'react'
