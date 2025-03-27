@@ -57,7 +57,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.smallBox, styles.button]}
-                        onPress={() => navigation.navigate('AddItems')}
+                        onPress={() => navigation.navigate('ShoppingList')}
                     >
                         <Ionicons name="cart-outline" size={30} color="#28A745" />
                         <Text style={styles.buttonText}>Shopping List</Text>
@@ -70,7 +70,11 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                         <Text style={styles.buttonText}>Expiry Items</Text>
                     </TouchableOpacity>
                 </View>
+<<<<<<< HEAD
 
+=======
+                
+>>>>>>> f0010c3939c134b2b9d6a99541712858bbf7ffc6
 
                 {/* Budget Shopping List Section */}
                 <View style={styles.budgetSection}>
@@ -244,4 +248,3 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
-

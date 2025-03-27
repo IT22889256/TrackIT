@@ -1,6 +1,6 @@
 // src/navigation/AppNavigator.tsx
 import React from 'react';
-// import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen'; 
@@ -22,10 +22,15 @@ import InventoryItemsScreen from '@/screens/InventoryItemsScreen';
 import MembersScreen from '@/screens/MemberScreen';
 import AddMemberScreen from '@/screens/AddMemberScreen';
 
-import ShoppingListScreen from '@/screens/ShoppligListScreen';
-import AddItemsScreen from '@/screens/AddItemsScreen';
 import BudgetListScreen from '@/screens/BudgetListScreen';
 import EnterBudgetScreen from '@/screens/EnterBudgetScreen';
+
+
+import InventoryScreen from '@/screens/InventoryScreen';
+import ShoppingListScreen from '@/screens/ShoppingListScreen';
+import AddItemsScreen from '@/screens/AddItemsScreen';
+import EditItemsScreen from '@/screens/EditItemsScreen';
+import ItemDetailsScreen from '@/screens/ItemDetailsScreen';
 
 
 export type RootStackParamList = {
@@ -36,28 +41,24 @@ export type RootStackParamList = {
   EditProfile:undefined;
   ChangePassword:undefined;
   Reports:undefined;
-
   Reminder: undefined;
   EditReminder: { reminderId: string };
   AddReminder: undefined;
   LabelScan: undefined;
   LabelPreview: { photo: any };
   LabelManualEdit: undefined;
-
-
   Camera: undefined;
   ScannedItems: { scannedItems: any };
   ManuallyAddItem: undefined;
   InventoryItems: undefined;
-
   Members:undefined;
- 
   ShoppingList:undefined;
   AddItems:undefined;
   BudgetList:undefined;
   EnterBudget: undefined;
-
-
+  EditItems:undefined;
+  ItemDetails:undefined;
+  InventoryScreen:undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -79,18 +80,15 @@ const AppNavigator = () => {
         <Stack.Screen name="Camera" component={CameraScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ScannedItems" component={ScannedItemsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ManuallyAddItem" component={ManuallyAddItem} options={{ headerShown: false }} />
-        
         <Stack.Screen name="InventoryItems" component={InventoryItemsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Members" component={MembersScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AddMember" component={AddMemberScreen} options={{ headerShown: false }} />
-       
         <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AddItems" component={AddItemsScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="BudgetList" component={BudgetListScreen} options={{ headerShown: false }} />
-        
+        <Stack.Screen name="BudgetList" component={BudgetListScreen} options={{ headerShown: false }} />  
         <Stack.Screen name="EnterBudget" component={EnterBudgetScreen} options={{ headerShown: false }} />
-
-        
+        <Stack.Screen name="EditItems" component={EditItemsScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ItemDetails" component={ItemDetailsScreen} options={{ headerShown: false }} />
 
       </Stack.Navigator>
     

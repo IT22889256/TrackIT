@@ -132,6 +132,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
             await setDoc(doc(db, 'users', user.uid), {
                 name: name,
                 email: email,
+                members: {}
             });
 
             navigation.navigate('Main');
@@ -219,7 +220,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
                         onPress={() => setPasswordVisible(!passwordVisible)}
                     >
                         <Ionicons
-                            name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+                            name={passwordVisible ? 'eye-outline' : 'eye-off-outline'}
                             size={24}
                             color="#666"
                         />

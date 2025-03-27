@@ -20,7 +20,7 @@ const LabelPreviewSection: React.FC<Props> = ({ photo, handleRetakePhoto }) => {
         <SafeAreaView style={styles.container}>
             {/* Go Back Button */}
             <TouchableOpacity style={styles.goBackButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color="black" />
+            <Ionicons name="arrow-back" size={24} color="black" />
             </TouchableOpacity>
 
             {/* Image Preview Box */}
