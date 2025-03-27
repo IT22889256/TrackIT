@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
@@ -11,13 +10,17 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    Image,
 } from 'react-native';
-import { auth, db } from '../firebaseConfig';
+import { auth, db, storage } from '../firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system'; // Import FileSystem
 
 type SignupScreenNavigationProp = StackNavigationProp<
     RootStackParamList,
@@ -43,10 +46,12 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
     const [passwordFocused, setPasswordFocused] = useState(false);
     const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [image, setImage] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
 
     const passwordInputRef = useRef<TextInput>(null);
 
-    // Real-time validation effects
+    // Real-time validation effects (same as before)
     useEffect(() => {
         if (nameFocused && !name.trim()) {
             setNameError('Name is required');
@@ -84,6 +89,47 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
             setConfirmPasswordError('');
         }
     }, [confirmPassword, password, confirmPasswordFocused]);
+
+    const pickImage = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission required', 'We need access to your photos to set a profile picture');
+            return;
+        }
+
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7, // Reduced quality to limit file size
+        });
+
+        if (!result.canceled) {
+            // Check file size (optional)
+            if(result.assets && result.assets[0]){
+                const fileInfo = await FileSystem.getInfoAsync(result.assets[0].uri);
+                if (fileInfo.size && fileInfo.size > 5 * 1024 * 1024) { // 2MB limit
+                    Alert.alert('Image too large', 'Please select an image smaller than 2MB');
+                    return;
+                }
+                setImage(result.assets[0].uri);
+            }
+
+        }
+    };
+
+    const convertImageToBase64 = async (uri: string) => {
+        try {
+            // Read the file as base64 string
+            const base64 = await FileSystem.readAsStringAsync(uri, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
+            return `data:image/jpeg;base64,${base64}`;
+        } catch (error) {
+            console.error("Error converting image to base64:", error);
+            return null;
+        }
+    };
 
     const handleSignup = async () => {
         let hasErrors = false;
@@ -129,13 +175,29 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
             );
             const user = userCredential.user;
 
-            await setDoc(doc(db, 'users', user.uid), {
+            let photoBase64 = null;
+            if (image) {
+                photoBase64 = await convertImageToBase64(image);
+                if (!photoBase64) {
+                    Alert.alert('Error', 'Failed to process profile image');
+                    return;
+                }
+            }
+
+            const userData = {
                 name: name,
                 email: email,
-                members: {}
-            });
+                members: {},
+                ...(photoBase64 && { photoBase64: photoBase64 }), // Only include if exists
+                createdAt: new Date().toISOString(),
+                receiptURL: null
 
-            navigation.navigate('Main');
+            };
+
+
+            await setDoc(doc(db, 'users', user.uid), userData);
+
+            navigation.navigate('Login');
         } catch (error: any) {
             Alert.alert('Signup Failed', error.message);
         } finally {
@@ -169,6 +231,17 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
         >
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <Text style={styles.title}>Create an Account</Text>
+
+                <TouchableOpacity onPress={pickImage} style={styles.profileImageContainer}>
+                    {image ? (
+                        <Image source={{ uri: image }} style={styles.profileImage} />
+                    ) : (
+                        <View style={styles.profileImagePlaceholder}>
+                            <Ionicons name="person" size={50} color="#666" />
+                            <Text style={styles.profileImageText}>Add Photo</Text>
+                        </View>
+                    )}
+                </TouchableOpacity>
 
                 <TextInput
                     style={[
@@ -248,9 +321,9 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
                 <TouchableOpacity
                     style={styles.button}
                     onPress={handleSignup}
-                    disabled={isLoading}
+                    disabled={isLoading || uploading}
                 >
-                    {isLoading ? (
+                    {(isLoading || uploading) ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
                         <Text style={styles.buttonText}>Sign Up</Text>
@@ -271,19 +344,18 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#fff',
     },
     scrollContainer: {
         flexGrow: 1,
-        justifyContent: 'center',
         padding: 20,
+        justifyContent: 'center',
     },
     title: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 30,
+        marginBottom: 20,
         textAlign: 'center',
-        color: '#333',
     },
     input: {
         borderWidth: 1,
@@ -303,26 +375,23 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     inputError: {
-        borderColor: '#ff4444',
+        borderColor: '#FF3B30',
+    },
+    errorText: {
+        color: '#FF3B30',
+        marginBottom: 10,
+        fontSize: 14,
     },
     passwordContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 15,
         position: 'relative',
     },
     passwordInput: {
-        flex: 1,
+        paddingRight: 50,
     },
     passwordToggle: {
         position: 'absolute',
         right: 15,
-        top: 15,
-    },
-    errorText: {
-        color: '#ff4444',
-        fontSize: 14,
-        marginBottom: 10,
+        top: 13,
     },
     button: {
         backgroundColor: '#6750A4',
@@ -333,7 +402,7 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
     },
     loginContainer: {
@@ -342,7 +411,6 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     loginText: {
-        fontSize: 16,
         color: '#666',
     },
     loginLink: {
@@ -351,7 +419,29 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginLeft: 5,
     },
+    profileImageContainer: {
+        alignSelf: 'center',
+        marginBottom: 20,
+    },
+    profileImage: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+    },
+    profileImagePlaceholder: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd',
+    },
+    profileImageText: {
+        marginTop: 5,
+        color: '#666',
+    },
 });
 
 export default SignupScreen;
-
