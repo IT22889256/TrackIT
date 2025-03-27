@@ -1,158 +1,158 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
-import { auth, db } from '../firebaseConfig'; // Import Firebase
-import { collection, getDocs, query, where, doc, deleteDoc } from 'firebase/firestore'; // Import deleteDoc
+import { auth, db } from '../firebaseConfig';
+import { doc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
 
+type MembersScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Members'>;
 
-type MembersScreenNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  'Members'
->;
-
-type Props = {
-  navigation: MembersScreenNavigationProp;
+type Member = {
+  id: string;
+  name: string;
+  email: string;
 };
 
-const MembersScreen: React.FC<Props> = ({ navigation }) => {
-  const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
+const MembersScreen: React.FC<{ navigation: MembersScreenNavigationProp }> = ({ navigation }) => {
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userDocumentId, setUserDocumentId] = useState<string | null>(null); // State to store the user document ID
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMembers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      const userDocRef = doc(db, 'users', auth.currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        throw new Error('User document not found');
+      }
+
+      const userData = userDoc.data();
+      const membersMap = userData.members || {};
+
+      const membersArray = Object.entries(membersMap).map(([id, memberData]: [string, any]) => ({
+        id,
+        name: memberData.name || 'No name',
+        email: memberData.email || 'No email',
+      }));
+
+      setMembers(membersArray);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError(err.message || 'Failed to load members');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchMembers = async () => {
-      if (auth.currentUser) {
-        try {
-          // 1. Get the user's document ID.
-          const userQuery = query(collection(db, 'users'), where('uid', '==', auth.currentUser.uid)); // Assumes you store uid in user doc
-          const userSnapshot = await getDocs(userQuery);
-
-          if (!userSnapshot.empty) {
-            //Get the User Doc
-            const userDoc = userSnapshot.docs[0];
-            setUserDocumentId(userDoc.id); // Store the User Document ID
-            // 2. Use the stored user document ID.
-            const membersCollectionRef = collection(db, 'users', userDoc.id, 'members'); // Get subcollection
-            const membersSnapshot = await getDocs(membersCollectionRef);
-
-            const membersData = membersSnapshot.docs.map(doc => ({
-              id: doc.id,
-              name: doc.data().name, // Adjust field name if necessary
-            }));
-            setMembers(membersData);
-          } else {
-            Alert.alert("Error", "User document not found.");
-            setLoading(false);
-          }
-
-
-        } catch (error) {
-          console.error("Error fetching members:", error);
-          Alert.alert("Error", "Failed to load members.");
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
-      }
-    };
-
-    fetchMembers();
-  }, []);
+    const unsubscribe = navigation.addListener('focus', fetchMembers);
+    return unsubscribe;
+  }, [navigation]);
 
   const handleRemoveMember = async (memberId: string, memberName: string) => {
     Alert.alert(
-      'Remove Member',
-      `Are you sure you want to remove ${memberName}?`,
+      'Confirm Removal',
+      `Remove ${memberName} from your members?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            if (auth.currentUser && userDocumentId) { // Ensure userDocumentId is available
-              try {
-                const memberDocRef = doc(db, 'users', userDocumentId, 'members', memberId);
-                await deleteDoc(memberDocRef);
-                // Update the local state to remove the member
-                setMembers(prevMembers =>
-                  prevMembers.filter(member => member.id !== memberId)
-                );
-                Alert.alert('Success', 'Member removed successfully.');
-              } catch (error) {
-                console.error('Error removing member:', error);
-                Alert.alert('Error', 'Failed to remove member.');
-              }
+            try {
+              if (!auth.currentUser) return;
+              
+              const userDocRef = doc(db, 'users', auth.currentUser.uid);
+              await updateDoc(userDocRef, {
+                [`members.${memberId}`]: deleteField(),
+              });
+              
+              setMembers(prev => prev.filter(m => m.id !== memberId));
+              Alert.alert('Success', 'Member removed successfully');
+            } catch (err) {
+              console.error('Remove error:', err);
+              Alert.alert('Error', 'Failed to remove member');
             }
           },
         },
-      ],
-      { cancelable: false }
+      ]
     );
   };
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6750A4" />
         <Text>Loading members...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchMembers}>
+          <Text style={styles.retryButtonText}>Try Again</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="black" />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.title}>Members</Text>
-        <View style={{ width: 40 }} /> {/* Placeholder for right button */}
+        <Text style={styles.title}>Your Members</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      {/* Member List */}
-      <View style={styles.memberList}>
+      <View style={styles.listContainer}>
         {members.length === 0 ? (
-          <Text style={styles.noMembersText}>No members added yet.</Text>
+          <View style={styles.emptyState}>
+            <Ionicons name="people-outline" size={48} color="#999" />
+            <Text style={styles.emptyText}>No members added yet</Text>
+          </View>
         ) : (
-          members.map((member) => (
-            <View key={member.id} style={styles.memberItem}>
-              {/* Placeholder for profile image */}
-              <View style={styles.profileImage} />
-              <Text style={styles.memberName}>{member.name}</Text>
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => {
-                    /* Navigate to edit member screen */
-                    Alert.alert('Edit Member', `Edit ${member.name}`);
-                  }}
-                >
-                  <Text style={styles.buttonText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveMember(member.id, member.name)}
-                >
-                  <Text style={styles.buttonText}>Remove</Text>
-                </TouchableOpacity>
+          members.map(member => (
+            <View key={member.id} style={styles.memberCard}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {member.name.charAt(0).toUpperCase()}
+                </Text>
               </View>
+              <View style={styles.memberInfo}>
+                <Text style={styles.memberName}>{member.name}</Text>
+                <Text style={styles.memberEmail}>{member.email}</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.deleteButton}
+                onPress={() => handleRemoveMember(member.id, member.name)}
+              >
+                <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+              </TouchableOpacity>
             </View>
           ))
         )}
       </View>
 
-      {/* Add Member Button */}
-      <TouchableOpacity
-        style={styles.addMemberButton}
-        onPress={() => navigation.navigate('AddMember')} // Navigate to AddMemberScreen
+      <TouchableOpacity 
+        style={styles.addButton}
+        onPress={() => navigation.navigate('AddMember')}
       >
-        <Text style={styles.addMemberButtonText}>Add Member</Text>
+        <Ionicons name="add" size={24} color="white" />
+        <Text style={styles.addButtonText}>Add Member</Text>
       </TouchableOpacity>
     </View>
   );
@@ -161,82 +161,121 @@ const MembersScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#6750A4',
+    padding: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#333',
   },
-  headerButton: {
-    padding: 8,
+  listContainer: {
+    flex: 1,
+    padding: 16,
   },
-  memberList: {
-    paddingHorizontal: 20,
-    marginTop: 20,
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.6,
   },
-  memberItem: {
+  emptyText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#999',
+  },
+  memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#D0D0D0',
-    marginRight: 10,
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#6750A4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  avatarText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  memberInfo: {
+    flex: 1,
   },
   memberName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
+    fontWeight: '600',
+    color: '#333',
   },
-  buttonContainer: {
+  memberEmail: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  addButton: {
     flexDirection: 'row',
-  },
-  editButton: {
     backgroundColor: '#6750A4',
-    padding: 8,
-    borderRadius: 5,
-    marginRight: 5,
-  },
-  removeButton: {
-    backgroundColor: '#CF1F1F',
-    padding: 8,
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  addMemberButton: {
-    backgroundColor: '#6750A4',
-    padding: 15,
     borderRadius: 8,
-    marginHorizontal: 20,
-    marginTop: 20,
+    padding: 16,
+    margin: 16,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  addMemberButtonText: {
+  addButtonText: {
     color: 'white',
     fontWeight: 'bold',
-  },
-  noMembersText: { // Style for empty list message
-    textAlign: 'center',
-    color: 'gray',
-    marginTop: 20,
+    marginLeft: 8,
+    fontSize: 16,
   },
 });
 
 export default MembersScreen;
-

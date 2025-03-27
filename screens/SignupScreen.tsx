@@ -132,6 +132,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
             await setDoc(doc(db, 'users', user.uid), {
                 name: name,
                 email: email,
+                members: {}
             });
 
             navigation.navigate('Main');
