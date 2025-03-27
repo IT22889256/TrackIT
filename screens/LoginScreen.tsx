@@ -202,11 +202,10 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     title: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 30,
+        marginBottom: 20,
         textAlign: 'center',
-        color: '#333',
     },
     input: {
         borderWidth: 1,
