@@ -39,7 +39,7 @@
     "expo-symbols": "~0.2.2",
     "expo-system-ui": "~4.0.8",
     "expo-web-browser": "~14.0.2",
-    "firebase": "^11.4.0",
+    "firebase": "^11.5.0",
     "nativewind": "^4.1.23",
     "postcss": "^8.5.3",
     "react": "18.3.1",
