@@ -70,11 +70,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                         <Text style={styles.buttonText}>Expiry Items</Text>
                     </TouchableOpacity>
                 </View>
-<<<<<<< HEAD
 
-=======
-                
->>>>>>> f0010c3939c134b2b9d6a99541712858bbf7ffc6
 
                 {/* Budget Shopping List Section */}
                 <View style={styles.budgetSection}>
