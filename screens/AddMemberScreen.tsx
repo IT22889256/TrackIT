@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
-import { auth, db } from '../firebaseConfig'; // Import auth and db
-import { collection, query, where, getDocs, updateDoc, doc, arrayUnion, getDoc } from 'firebase/firestore';  // Import firestore
+import { auth, db } from '../firebaseConfig';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 
-// Define the types for your navigation and props
-type AddMemberScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddMember'
->;
+type AddMemberScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddMember'>;
 
 type Props = {
     navigation: AddMemberScreenNavigationProp;
-    groupId: string; // Add groupId to the props, to know which group to add the member to.
 };
 
-const AddMemberScreen: React.FC<Props> = ({ navigation, groupId }) => {
+const AddMemberScreen: React.FC<Props> = ({ navigation }) => {
   const [searchEmail, setSearchEmail] = useState('');
   const [member, setMember] = useState<{ uid: string; name: string; email: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,47 +59,29 @@ const AddMemberScreen: React.FC<Props> = ({ navigation, groupId }) => {
   };
 
   const handleAddMember = async () => {
-    if (member) {
-      Alert.alert(
-        'Add Member',
-        `Are you sure you want to add ${member.name} to this group?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Add',
-            onPress: async () => {
-              setLoading(true);
-              try {
-                const groupRef = doc(db, 'groups', groupId);
-  
-                // Get the current group document
-                const groupDoc = await getDoc(groupRef);
-  
-                // Check if the members field exists
-                const members = groupDoc.data()?.members || [];
-  
-                // Update the document with the new member
-                await updateDoc(groupRef, {
-                  members: arrayUnion(member.uid),
-                });
-  
-                Alert.alert('Success', `${member.name} has been added to the group.`);
-                navigation.goBack();
-              } catch (error: any) {
-                console.error('Error adding member to group:', error);
-                Alert.alert('Error', `Failed to add member: ${error.message}`);
-              } finally {
-                setLoading(false);
-              }
-            },
-          },
-        ]
-      );
-    } else {
-      Alert.alert('Error', 'No member to add. Please search for a member first.');
-    }
-  };
+    if (member && auth.currentUser) {
+        setLoading(true);
+        try {
+            const userDocRef = doc(db, 'users', auth.currentUser.uid);
+            await updateDoc(userDocRef, {
+                [`members.${member.uid}`]: { // Use member.uid as the key in the map
+                    name: member.name,
+                    email: member.email,
+                },
+            });
 
+            Alert.alert('Success', `${member.name} has been added to your members.`);
+            navigation.goBack();
+        } catch (error: any) {
+            console.error('Error adding member:', error);
+            Alert.alert('Error', `Failed to add member: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    } else {
+        Alert.alert('Error', 'No member to add or user not logged in.');
+    }
+};
   const handleRemoveMember = () => {
     if (member) {
       Alert.alert(

@@ -1,10 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { auth } from '../firebaseConfig';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutUp } from 'react-native-reanimated';
+
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -21,6 +24,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     const [emailFocused, setEmailFocused] = useState(false);
     const [passwordFocused, setPasswordFocused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
     const handleLogin = async () => {
         let hasErrors = false;
@@ -40,10 +44,20 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
         setIsLoading(true);
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            //const user = userCredential.user;  // No need to use it.
             navigation.navigate('Main');
+            setMessage(null);
         } catch (error: any) {
-            Alert.alert('Login Failed', error.message);
+            let errorMessage = "Login failed. Please check your credentials.";
+            // if (error.code === 'auth/user-not-found') {
+            //     errorMessage = 'There is no account for this email.'; // Changed message here
+            // } else if (error.code === 'auth/wrong-password') {
+            //     errorMessage = 'Incorrect password.';
+            // } else if (error.code === 'auth/too-many-requests') {
+            //     errorMessage = 'Too many failed login attempts. Please try again later.';
+            // }
+            setMessage({ text: errorMessage, type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -67,13 +81,21 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     useEffect(() => {
         if (passwordFocused && !password.trim()) {
             setPasswordError('Password is required');
-        }
-        else if (passwordFocused && password.length < 6) {
+        } else if (passwordFocused && password.length < 6) {
             setPasswordError('Password must be at least 6 characters long.');
         } else {
             setPasswordError('');
         }
     }, [password, passwordFocused]);
+
+    useEffect(() => {
+        if (message) {
+            const timer = setTimeout(() => {
+                setMessage(null);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [message]);
 
     return (
         <KeyboardAvoidingView
@@ -119,7 +141,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                         onPress={togglePasswordVisibility}
                     >
                         <Ionicons
-                            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                            name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                             size={24}
                             color="#666"
                         />
@@ -149,6 +171,21 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                         </Text>
                     </TouchableOpacity>
                 </View>
+
+                {message && (
+                    <Animated.View
+                        entering={FadeIn.duration(300)}
+                        exiting={FadeOut.duration(300)}
+                        style={[
+                            styles.messageContainer,
+                            message.type === 'error' && styles.error,
+                            message.type === 'success' && styles.success,
+                            message.type === 'info' && styles.info,
+                        ]}
+                    >
+                        <Text style={styles.messageText}>{message.text}</Text>
+                    </Animated.View>
+                )}
             </ScrollView>
         </KeyboardAvoidingView>
     );
@@ -165,11 +202,10 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     title: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 30,
+        marginBottom: 20,
         textAlign: 'center',
-        color: '#333',
     },
     input: {
         borderWidth: 1,
@@ -234,6 +270,28 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginLeft: 5,
     },
+    messageContainer: {
+        padding: 15,
+        borderRadius: 8,
+        marginTop: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    messageText: {
+        color: '#fff',
+        fontSize: 16,
+        textAlign: 'center',
+    },
+    error: {
+        backgroundColor: '#ff4444',
+    },
+    success: {
+        backgroundColor: '#4CAF50',
+    },
+    info: {
+        backgroundColor: '#2196F3',
+    },
 });
 
 export default LoginScreen;
+

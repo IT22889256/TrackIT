@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated } from 'react-native';
+import { 
+    View, 
+    Text, 
+    StyleSheet, 
+    TouchableOpacity, 
+    Alert, 
+    Animated,
+    Image,
+    ActivityIndicator
+} from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,18 +26,19 @@ type Props = {
 const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     const [userName, setUserName] = useState<string>('');
     const [email, setEmail] = useState<string>('');
+    const [profileImage, setProfileImage] = useState<string | null>(null);
+    const [loadingImage, setLoadingImage] = useState<boolean>(true);
     const [fontsLoaded] = useFonts({
         // 'InterBold': require('../assets/fonts/Inter-Bold.ttf'),
         // 'InterRegular': require('../assets/fonts/Inter-Regular.ttf'),
         // 'InterMedium': require('../assets/fonts/Inter-Medium.ttf'),
     });
 
-    // --- Animation Values using useRef ---
+    // Animation refs
     const editButtonScale = useRef(new Animated.Value(1)).current;
     const reportsButtonScale = useRef(new Animated.Value(1)).current;
     const membersButtonScale = useRef(new Animated.Value(1)).current;
     const removeButtonScale = useRef(new Animated.Value(1)).current;
-    // --------------------------------------
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -41,12 +51,17 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                         const userData = userDoc.data();
                         setUserName(userData.name || 'User Name');
                         setEmail(userData.email || '@email.com');
-                    } else {
-                        console.log('User document not found');
+                        
+                        // Check for Base64 image data
+                        if (userData.photoBase64) {
+                            setProfileImage(userData.photoBase64);
+                        }
                     }
                 }
             } catch (error) {
                 console.error('Error fetching user data:', error);
+            } finally {
+                setLoadingImage(false);
             }
         };
 
@@ -58,59 +73,41 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
             "Logout",
             "Are you sure you want to logout?",
             [
-                {
-                    text: "Cancel",
-                    style: "cancel"
-                },
-                {
-                    text: "Logout",
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Logout", 
                     onPress: () => {
                         auth.signOut().then(() => {
                             navigation.navigate('Login');
-                        }).catch((error) => {
-                            console.error("Error signing out: ", error);
-                            Alert.alert("Logout Error", "Failed to logout. Please try again.");
                         });
                     }
                 }
-            ],
-            { cancelable: false }
+            ]
         );
     };
 
     const handleRemoveAccount = async () => {
         Alert.alert(
             "Remove Account",
-            "Are you sure you want to permanently remove your account? This action cannot be undone.",
+            "Are you sure you want to permanently remove your account?",
             [
                 { text: "Cancel", style: "cancel" },
                 {
                     text: "Remove",
                     style: 'destructive',
                     onPress: async () => {
-                        try {
-                            if (auth.currentUser) {
-                                const userDocRef = doc(db, 'users', auth.currentUser.uid);
-                                await deleteDoc(userDocRef);
-                                await deleteUser(auth.currentUser);
-                                navigation.navigate('Login');
-                                Alert.alert("Account Removed", "Your account has been successfully removed.");
-
-                            } else {
-                                Alert.alert("Error", "No user is currently logged in.");
-                            }
-                        } catch (error: any) {
-                            console.error("Error removing account: ", error);
-                            Alert.alert("Error Removing Account", `Failed to remove your account: ${error.message}`);
+                        if (auth.currentUser) {
+                            await deleteDoc(doc(db, 'users', auth.currentUser.uid));
+                            await deleteUser(auth.currentUser);
+                            navigation.navigate('Login');
                         }
                     },
                 },
-            ],
-            { cancelable: false }
+            ]
         );
     };
 
-    // ---  Functions to handle button press animation ---
+    // Animation handlers
     const handlePressIn = (animatedValue: Animated.Value) => {
         Animated.spring(animatedValue, {
             toValue: 0.95,
@@ -122,47 +119,52 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         Animated.spring(animatedValue, {
             toValue: 1,
             useNativeDriver: true,
-        }).start(() => {
-            onPress();
-        });
+        }).start(() => onPress());
     };
-    // ----------------------------------------------------
 
     if (!fontsLoaded) {
         return (
             <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Loading...</Text>
+                <Text>Loading...</Text>
             </View>
         );
     }
-
 
     return (
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.headerButton}
-                >
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
                     <Ionicons name="arrow-back" size={24} color="#333" />
                 </TouchableOpacity>
                 <Text style={styles.title}>My Profile</Text>
-                <TouchableOpacity
-                    style={styles.headerButton}
-                    onPress={handleLogout}
-                >
+                <TouchableOpacity onPress={handleLogout} style={styles.headerButton}>
                     <Ionicons name="log-out-outline" size={24} color="#333" />
                 </TouchableOpacity>
             </View>
 
             {/* Profile Info */}
             <View style={styles.profileInfo}>
-                <View style={styles.profileImage}></View>
+                {loadingImage ? (
+                    <View style={styles.profileImagePlaceholder}>
+                        <ActivityIndicator size="small" color="#666" />
+                    </View>
+                ) : profileImage ? (
+                    <Image 
+                        source={{ uri: profileImage }} 
+                        style={styles.profileImage}
+                    />
+                ) : (
+                    <View style={styles.profileImagePlaceholder}>
+                        <Ionicons name="person" size={50} color="#666" />
+                    </View>
+                )}
+                
                 <View style={styles.profileText}>
                     <Text style={styles.userName}>{userName}</Text>
                     <Text style={styles.email}>{email}</Text>
                 </View>
+                
                 <Animated.View style={{ transform: [{ scale: editButtonScale }] }}>
                     <TouchableOpacity
                         style={styles.editButton}
@@ -177,7 +179,6 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
             {/* Options */}
             <View style={styles.options}>
-                {/* Reports Button */}
                 <Animated.View style={{ transform: [{ scale: reportsButtonScale }] }}>
                     <TouchableOpacity
                         style={{ ...styles.optionItem, backgroundColor: '#4CAF50' }}
@@ -189,7 +190,6 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                     </TouchableOpacity>
                 </Animated.View>
 
-                {/* Members Button */}
                 <Animated.View style={{ transform: [{ scale: membersButtonScale }] }}>
                     <TouchableOpacity
                         style={{ ...styles.optionItem, backgroundColor: '#2196F3' }}
@@ -227,11 +227,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    loadingText: {
-        fontSize: 16,
-        fontFamily: 'InterRegular',
-        color: '#333',
-    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -243,7 +238,6 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 22,
-        fontFamily: 'InterBold',
         fontWeight: 'bold',
         color: '#333',
     },
@@ -260,11 +254,15 @@ const styles = StyleSheet.create({
         borderRadius: 60,
         backgroundColor: '#E0E0E0',
         marginBottom: 15,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 3,
+    },
+    profileImagePlaceholder: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: '#E0E0E0',
+        marginBottom: 15,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     profileText: {
         alignItems: 'center',
@@ -272,13 +270,11 @@ const styles = StyleSheet.create({
     },
     userName: {
         fontSize: 20,
-        fontFamily: 'InterBold',
         fontWeight: 'bold',
         color: '#333',
     },
     email: {
         fontSize: 16,
-        fontFamily: 'InterRegular',
         color: 'gray',
     },
     editButton: {
@@ -287,36 +283,23 @@ const styles = StyleSheet.create({
         paddingHorizontal: 25,
         borderRadius: 8,
         marginTop: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 3,
     },
     editButtonText: {
         color: 'white',
         fontWeight: 'bold',
-        fontFamily: 'InterMedium',
         fontSize: 16,
     },
     options: {
         padding: 20,
     },
     optionItem: {
-        backgroundColor: '#FFFFFF',
         padding: 20,
         borderRadius: 10,
         marginBottom: 15,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        elevation: 1,
     },
     optionText: {
         fontSize: 18,
-        fontFamily: 'InterMedium',
         color: '#333',
     },
     removeButton: {
@@ -325,16 +308,10 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: 'center',
         margin: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 3,
     },
     removeButtonText: {
         color: 'white',
         fontWeight: 'bold',
-        fontFamily: 'InterMedium',
         fontSize: 16,
     },
 });

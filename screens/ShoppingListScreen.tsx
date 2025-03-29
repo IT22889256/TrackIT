@@ -26,7 +26,7 @@ const ShoppingListScreen = () => {
                 const newItems = route.params.newItems;
                 const updatedItems = [...prevItems];
 
-                newItems.forEach(newItem => {
+                newItems.forEach((newItem: Item) => {
                     const existingItemIndex = updatedItems.findIndex((item) => item.id === newItem.id);
                     if (existingItemIndex !== -1) {
                         updatedItems[existingItemIndex] = newItem;
