@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import {  RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/navigation/AppNavigator';
+import { auth, db } from '../firebaseConfig';
+import { collection, addDoc } from 'firebase/firestore';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 type ScannedItemsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ScannedItems'>;
 type ScannedItemsScreenRouteProp = RouteProp<RootStackParamList, 'ScannedItems'>;
@@ -23,12 +25,45 @@ type ScannedItem = {
 const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
     const { scannedItems } = route.params;
     const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+    const [loading, setLoading] = useState(false);
 
     const toggleCheckbox = (id: string) => {
         setCheckedItems((prev) => ({
             ...prev,
             [id]: !prev[id],
         }));
+    };
+
+    const addToInventory = async () => {
+        if (!auth.currentUser) {
+            Alert.alert('Error', 'User not authenticated.');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const userUid = auth.currentUser.uid;
+            const inventoryCollectionRef = collection(db, 'users', userUid, 'inventory');
+
+            for (const item of scannedItems) {
+                await addDoc(inventoryCollectionRef, {
+                    description: item.description,
+                    price: item.price,
+                    quantity: item.quantity,
+                    addedAt: new Date(),
+                    checked: checkedItems[item.id] || false,
+                });
+            }
+
+            setLoading(false);
+            Alert.alert('Success', 'Items added to inventory.');
+            navigation.navigate('InventoryItems');
+        } catch (error) {
+            console.error('Error adding to inventory:', error);
+            setLoading(false);
+            Alert.alert('Error', 'Failed to add items to inventory.');
+        }
     };
 
     return (
@@ -73,9 +108,13 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
 
             <Text style={styles.orText}>OR</Text>
 
-            <TouchableOpacity style={styles.inventoryButton} onPress={() => navigation.navigate('InventoryItems')}>
-                <Text style={styles.buttonText}>Add to Inventory</Text>
-            </TouchableOpacity>
+            {loading ? (
+                <ActivityIndicator size="large" color="black" />
+            ) : (
+                <TouchableOpacity style={styles.inventoryButton} onPress={addToInventory}>
+                    <Text style={styles.buttonText}>Add to Inventory</Text>
+                </TouchableOpacity>
+            )}
         </View>
     );
 };
