@@ -18,8 +18,9 @@ type Props = {
 type ScannedItem = {
     id: string;
     description: string;
-    price: number;
+    unitprice: number;
     quantity: number;
+    totalPrice: number;
 };
 
 const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
@@ -49,8 +50,9 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
             for (const item of scannedItems) {
                 await addDoc(inventoryCollectionRef, {
                     description: item.description,
-                    price: item.price,
+                    unitprice: item.price,
                     quantity: item.quantity,
+                    totalPrice: item.price*item.quantity,
                     addedAt: new Date(),
                     checked: checkedItems[item.id] || false,
                 });
@@ -88,10 +90,12 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
                             <View>
                                 <Text style={styles.label}>Item Name</Text>
                                 <Text style={styles.value}>{item.description}</Text>
-                                <Text style={styles.label}>Price</Text>
+                                <Text style={styles.label}>Unit Price (1Kg/ 1 Unit)</Text>
                                 <Text style={styles.value}>Rs. {item.price}</Text>
                                 <Text style={styles.label}>Quantity</Text>
                                 <Text style={styles.value}>{item.quantity}</Text>
+                                <Text style={styles.label}>Total Price</Text>
+                                <Text style={styles.value}>Rs. {(item.price*item.quantity).toFixed(2)}</Text>
                             </View>
 
                             <TouchableOpacity onPress={() => toggleCheckbox(item.id)}>

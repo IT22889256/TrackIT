@@ -17,7 +17,7 @@ type InventoryItem = {
     id: string;
     description: string;
     quantity: number;
-    price: number;
+    totalPrice: number;
     expiryDate?: string;
 };
 
@@ -119,7 +119,7 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                             <View style={styles.itemDetailsContainer}>
                                 <Text style={styles.itemName}>{truncatedDescription}</Text>
                                 <Text style={styles.itemQuantity}>Quantity: {item.quantity}</Text>
-                                <Text style={styles.itemPrice}>Price: Rs. {item.price}</Text>
+                                <Text style={styles.itemPrice}>Price: Rs. {item.totalPrice}</Text>
                                 {item.expiryDate && (
                                     <Text style={styles.itemExpiry}>Expiry: {item.expiryDate}</Text>
                                 )}
