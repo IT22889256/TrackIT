@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font'; // Import the hook
+import { auth } from '@/firebaseConfig';
 
 // Placeholder types, replace with your actual types
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
@@ -14,12 +15,21 @@ type Props = {
 };
 
 
-
-
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
     const [fontsLoaded] = useFonts({  // Load the font
          // Make sure the path is correct
     });
+
+
+    const handleNavigateToMyList = () => {
+        const currentUserUid = auth.currentUser?.uid;
+        if (currentUserUid) {
+            navigation.navigate('ShoppingList', { memberId: currentUserUid }); // Pass uid as memberId
+        } else {
+            Alert.alert('Not Authenticated', 'Please log in to view your shopping list.');
+            // Optionally navigate to a login screen
+        }
+    };
 
     const handleExpirySoonItemsPress = () => {
         // Navigate to the 'Reminder' screen when the expiry soon items box is pressed
@@ -57,7 +67,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.smallBox, styles.button]}
-                        onPress={() => navigation.navigate('ShoppingList')}
+                        onPress={handleNavigateToMyList}
                     >
                         <Ionicons name="cart-outline" size={30} color="#28A745" />
                         <Text style={styles.buttonText}>Shopping List</Text>

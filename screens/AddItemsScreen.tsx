@@ -1,22 +1,44 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { auth, db } from '../firebaseConfig';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
+interface RouteParams {
+    ownerId?: string;
+}
 
 const AddItemsScreen = () => {
     const [itemName, setItemName] = useState('');
-    const [quantity, setQuantity] = useState(0);
+    const [quantity, setQuantity] = useState(1);
     const [description, setDescription] = useState('');
     const [addImage, setAddImage] = useState(false);
     const [itemNameError, setItemNameError] = useState('');
     const [quantityError, setQuantityError] = useState('');
 
     const navigation = useNavigation();
+    const { params } = useRoute<RouteProp<{ params?: RouteParams }, 'params'>>();
+    const ownerId = params?.ownerId;
+    const currentUserId = auth.currentUser?.uid;
+    console.log(ownerId);
+    console.log(currentUserId);
 
-    const handleAddItem = () => {
+    const handleAddItem = async () => {
         let isValid = true;
         setItemNameError('');
         setQuantityError('');
+
+        if (!currentUserId) {
+            Alert.alert('Authentication Error', 'User not logged in.');
+            return;
+        }
+
+        if (!ownerId) {
+            Alert.alert('Navigation Error', 'Owner ID not provided.');
+            navigation.goBack();
+            return;
+        }
 
         if (itemName.trim() === '') {
             setItemNameError('Item name is required.');
@@ -32,33 +54,39 @@ const AddItemsScreen = () => {
             return;
         }
 
-        const newItem = {
-            id: String(Date.now()),
-            name: itemName,
-            quantity: quantity,
-            description: description,
-            addImage: addImage,
-        };
-
-        navigation.navigate('ShoppingList', { newItems: [newItem] }); // Send as an array
+        try {
+            const shoppingListCollectionRef = collection(db, 'users', ownerId, 'shoppingList');
+            await addDoc(shoppingListCollectionRef, {
+                name: itemName,
+                quantity: parseInt(quantity.toString(), 10),
+                description: description,
+                addImage: addImage,
+                createdAt: serverTimestamp(),
+            });
+            console.log('Item added to shopping list!');
+            navigation.goBack();
+        } catch (error: any) {
+            Alert.alert('Error', 'Could not add item to shopping list.');
+            console.error('Error adding item:', error);
+        }
     };
 
     const handleGoBack = () => {
-      navigation.navigate('ShoppingList'); // Navigate to HomeScreen
-  };
-  
+        navigation.goBack();
+    };
+
     const incrementQuantity = () => {
         setQuantity((prevQuantity) => prevQuantity + 1);
     };
 
     const decrementQuantity = () => {
-        setQuantity((prevQuantity) => (prevQuantity > 0 ? prevQuantity - 1 : 0));
+        setQuantity((prevQuantity) => (prevQuantity > 1 ? prevQuantity - 1 : 1));
     };
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
                     <Ionicons name="arrow-back" size={24} color="#000" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Add Items</Text>

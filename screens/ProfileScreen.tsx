@@ -12,9 +12,10 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
-import { auth, db } from '../firebaseConfig';
+import { auth, db, storage } from '../firebaseConfig';
 import { deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
+import { ref, getDownloadURL } from 'firebase/storage';
 import { useFonts } from 'expo-font';
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Profile'>;
@@ -26,7 +27,7 @@ type Props = {
 const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     const [userName, setUserName] = useState<string>('');
     const [email, setEmail] = useState<string>('');
-    const [profileImage, setProfileImage] = useState<string | null>(null);
+    const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
     const [loadingImage, setLoadingImage] = useState<boolean>(true);
     const [fontsLoaded] = useFonts({
         // 'InterBold': require('../assets/fonts/Inter-Bold.ttf'),
@@ -50,11 +51,19 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         setUserName(userData.name || 'User Name');
-                        setEmail(userData.email || '@email.com');
+                        setEmail(userData.email || auth.currentUser?.email || '@email.com');
                         
-                        // Check for Base64 image data
-                        if (userData.photoBase64) {
-                            setProfileImage(userData.photoBase64);
+                        // Check for profile picture URL in Firestore
+                        if (userData.profilePictureUrl) {
+                            try {
+                                // Get fresh download URL from Storage
+                                const storageRef = ref(storage, userData.profilePictureUrl);
+                                const downloadUrl = await getDownloadURL(storageRef);
+                                setProfileImageUrl(downloadUrl);
+                            } catch (error) {
+                                console.error('Error fetching image from storage:', error);
+                                setProfileImageUrl(null);
+                            }
                         }
                     }
                 }
@@ -97,9 +106,18 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                     style: 'destructive',
                     onPress: async () => {
                         if (auth.currentUser) {
-                            await deleteDoc(doc(db, 'users', auth.currentUser.uid));
-                            await deleteUser(auth.currentUser);
-                            navigation.navigate('Login');
+                            try {
+                                // Delete user document
+                                await deleteDoc(doc(db, 'users', auth.currentUser.uid));
+                                
+                                // Delete user from authentication
+                                await deleteUser(auth.currentUser);
+                                
+                                navigation.navigate('Login');
+                            } catch (error) {
+                                console.error('Error deleting account:', error);
+                                Alert.alert('Error', 'Failed to delete account. Please try again.');
+                            }
                         }
                     },
                 },
@@ -125,7 +143,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     if (!fontsLoaded) {
         return (
             <View style={styles.loadingContainer}>
-                <Text>Loading...</Text>
+                <ActivityIndicator size="large" color="#0000ff" />
             </View>
         );
     }
@@ -149,10 +167,11 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                     <View style={styles.profileImagePlaceholder}>
                         <ActivityIndicator size="small" color="#666" />
                     </View>
-                ) : profileImage ? (
+                ) : profileImageUrl ? (
                     <Image 
-                        source={{ uri: profileImage }} 
+                        source={{ uri: profileImageUrl }} 
                         style={styles.profileImage}
+                        onError={() => setProfileImageUrl(null)}
                     />
                 ) : (
                     <View style={styles.profileImagePlaceholder}>

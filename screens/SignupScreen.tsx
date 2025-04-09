@@ -14,13 +14,13 @@ import {
 } from 'react-native';
 import { auth, db, storage } from '../firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system'; // Import FileSystem
+import * as FileSystem from 'expo-file-system';
 
 type SignupScreenNavigationProp = StackNavigationProp<
     RootStackParamList,
@@ -37,6 +37,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordVisible, setPasswordVisible] = useState(false);
+    const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
     const [nameError, setNameError] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
@@ -50,8 +51,9 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
     const [uploading, setUploading] = useState(false);
 
     const passwordInputRef = useRef<TextInput>(null);
+    const confirmPasswordInputRef = useRef<TextInput>(null);
 
-    // Real-time validation effects (same as before)
+    // Real-time validation effects
     useEffect(() => {
         if (nameFocused && !name.trim()) {
             setNameError('Name is required');
@@ -101,33 +103,49 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 0.7, // Reduced quality to limit file size
+            quality: 0.7,
         });
 
-        if (!result.canceled) {
-            // Check file size (optional)
-            if(result.assets && result.assets[0]){
-                const fileInfo = await FileSystem.getInfoAsync(result.assets[0].uri);
-                if (fileInfo.size && fileInfo.size > 5 * 1024 * 1024) { // 2MB limit
-                    Alert.alert('Image too large', 'Please select an image smaller than 2MB');
-                    return;
-                }
-                setImage(result.assets[0].uri);
+        if (!result.canceled && result.assets && result.assets[0]) {
+            const fileInfo = await FileSystem.getInfoAsync(result.assets[0].uri);
+            if (fileInfo.size && fileInfo.size > 5 * 1024 * 1024) { // 5MB limit
+                Alert.alert('Image too large', 'Please select an image smaller than 5MB');
+                return;
             }
-
+            setImage(result.assets[0].uri);
         }
     };
 
-    const convertImageToBase64 = async (uri: string) => {
+    const uploadImageAsync = async (uri: string, userId: string) => {
+        setUploading(true);
+
         try {
-            // Read the file as base64 string
-            const base64 = await FileSystem.readAsStringAsync(uri, {
-                encoding: FileSystem.EncodingType.Base64,
+            const blob = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.onload = () => {
+                    resolve(xhr.response);
+                };
+                xhr.onerror = (e) => {
+                    reject(new TypeError('Network request failed'));
+                };
+                xhr.responseType = 'blob';
+                xhr.open('GET', uri, true);
+                xhr.send(null);
             });
-            return `data:image/jpeg;base64,${base64}`;
+
+            const fileRef = ref(storage, `profilePictures/${userId}/${Date.now()}`);
+            await uploadBytes(fileRef, blob as Blob);
+
+            // We're done with the blob, close and release it
+            (blob as any).close();
+
+            const downloadURL = await getDownloadURL(fileRef);
+            return downloadURL;
         } catch (error) {
-            console.error("Error converting image to base64:", error);
-            return null;
+            console.error('Error uploading image:', error);
+            throw error;
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -167,7 +185,9 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
         }
 
         setIsLoading(true);
+
         try {
+            // 1. Create user in Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(
                 auth,
                 email,
@@ -175,29 +195,36 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
             );
             const user = userCredential.user;
 
-            let photoBase64 = null;
+            // 2. Upload image if one was selected
+            let profilePictureUrl = null;
             if (image) {
-                photoBase64 = await convertImageToBase64(image);
-                if (!photoBase64) {
-                    Alert.alert('Error', 'Failed to process profile image');
-                    return;
-                }
+                profilePictureUrl = await uploadImageAsync(image, user.uid);
             }
 
-            const userData = {
+            // 3. Create user document in Firestore and set ownerId
+            const userDocRef = doc(db, 'users', user.uid);
+            await setDoc(userDocRef, {
                 name: name,
                 email: email,
-                members: {},
-                ...(photoBase64 && { photoBase64: photoBase64 }), // Only include if exists
-                createdAt: new Date().toISOString()
-            };
+                ownerId: user.uid, // Add the ownerId field here
+                ...(profilePictureUrl && { profilePictureUrl }),
+                createdAt: new Date().toISOString(),
+            });
 
-
-            await setDoc(doc(db, 'users', user.uid), userData);
+            // 4. Optionally create initial documents in subcollections (example)
+            const shoppingListCollectionRef = collection(userDocRef, 'shoppingList');
+            const inventoryCollectionRef = collection(userDocRef, 'inventory');
+            const expireItemsCollectionRef = collection(userDocRef, 'expireItems');
+            const membersCollectionRef = collection(userDocRef, 'members');
+            // You might want to add an initial empty document or some default data
+            // await addDoc(shoppingListCollectionRef, { items: [], createdAt: new Date().toISOString() });
+            // await addDoc(inventoryCollectionRef, { items: [], createdAt: new Date().toISOString() });
+            // await addDoc(expireItemsCollectionRef, { items: [], createdAt: new Date().toISOString() });
 
             navigation.navigate('Login');
         } catch (error: any) {
-            Alert.alert('Signup Failed', error.message);
+            console.error('Signup error:', error);
+            Alert.alert('Signup Failed', error.message || 'An error occurred during signup');
         } finally {
             setIsLoading(false);
         }
@@ -239,6 +266,11 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
                             <Text style={styles.profileImageText}>Add Photo</Text>
                         </View>
                     )}
+                    {(uploading && isLoading) && (
+                        <View style={styles.uploadOverlay}>
+                            <ActivityIndicator size="large" color="#fff" />
+                        </View>
+                    )}
                 </TouchableOpacity>
 
                 <TextInput
@@ -265,6 +297,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
+                    autoCapitalize="none"
                     onFocus={() => setEmailFocused(true)}
                     onBlur={() => setEmailFocused(false)}
                 />
@@ -283,6 +316,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
                         onChangeText={setPassword}
                         secureTextEntry={!passwordVisible}
                         ref={passwordInputRef}
+                        autoCapitalize="none"
                         onFocus={() => setPasswordFocused(true)}
                         onBlur={() => setPasswordFocused(false)}
                     />
@@ -299,19 +333,34 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
                 {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
 
-                <TextInput
-                    style={[
-                        styles.input,
-                        confirmPasswordFocused && styles.inputFocused,
-                        confirmPasswordError && styles.inputError,
-                    ]}
-                    placeholder="Confirm Password"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!passwordVisible}
-                    onFocus={() => setConfirmPasswordFocused(true)}
-                    onBlur={() => setConfirmPasswordFocused(false)}
-                />
+                <View style={styles.passwordContainer}>
+                    <TextInput
+                        style={[
+                            styles.input,
+                            styles.passwordInput,
+                            confirmPasswordFocused && styles.inputFocused,
+                            confirmPasswordError && styles.inputError,
+                        ]}
+                        placeholder="Confirm Password"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        secureTextEntry={!confirmPasswordVisible}
+                        autoCapitalize="none"
+                        onFocus={() => setConfirmPasswordFocused(true)}
+                        onBlur={() => setConfirmPasswordFocused(false)}
+                        ref={confirmPasswordInputRef}
+                    />
+                    <TouchableOpacity
+                        style={styles.passwordToggle}
+                        onPress={() => setConfirmPasswordVisible(!confirmPasswordVisible)}
+                    >
+                        <Ionicons
+                            name={confirmPasswordVisible ? 'eye-outline' : 'eye-off-outline'}
+                            size={24}
+                            color="#666"
+                        />
+                    </TouchableOpacity>
+                </View>
                 {confirmPasswordError && (
                     <Text style={styles.errorText}>{confirmPasswordError}</Text>
                 )}
@@ -382,6 +431,7 @@ const styles = StyleSheet.create({
     },
     passwordContainer: {
         position: 'relative',
+        marginBottom: 15,
     },
     passwordInput: {
         paddingRight: 50,
@@ -420,6 +470,7 @@ const styles = StyleSheet.create({
     profileImageContainer: {
         alignSelf: 'center',
         marginBottom: 20,
+        position: 'relative',
     },
     profileImage: {
         width: 120,
@@ -439,6 +490,15 @@ const styles = StyleSheet.create({
     profileImageText: {
         marginTop: 5,
         color: '#666',
+    },
+    uploadOverlay: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
 
