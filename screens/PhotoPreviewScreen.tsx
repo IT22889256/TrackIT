@@ -4,7 +4,10 @@ import { RootStackParamList } from '@/navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraCapturedPicture } from 'expo-camera';
 import React, { useState } from 'react';
+import { storage } from '../firebaseConfig'; 
 import { TouchableOpacity, SafeAreaView, Image, StyleSheet, View, Text, ActivityIndicator, Alert } from 'react-native';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
@@ -13,31 +16,76 @@ type Props = {
     handleRetakePhoto: () => void;
 };
 
+   //example outpot of the veryfi
+    // [
+    //     {
+    //       "description": "KOTMALE FULL CREAM UHT MILK TETRA 180M\n1.0",
+    //       "price": 140.0,
+    //       "quantity": 1.0
+    //     },
+    //     {
+    //       "description": "9825: AMBEWELA SET YOGHURT PLAIN 80ML\n1.0",
+    //       "price": 80.0,
+    //       "quantity": 1.0
+    //     },
+    //     {
+    //       "description": "KOTMALE JELLY YOGHURT 80G",
+    //       "price": 80.0,
+    //       "quantity": 7.0
+    //     }
+    //   ]
+
 const PhotoPreviewSection: React.FC<Props> = ({ photo, handleRetakePhoto }) => {
     const navigation = useNavigation<NavigationProp>();
     const [loading, setLoading] = useState(false);
 
     const handleUpload = async () => {
-        setLoading(true); // Show loading indicator
-
+        setLoading(true);
         try {
-            const response = await fetch('http://192.168.8.159:5000/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to upload');
+            if (!photo.uri) {
+                throw new Error('Photo does not contain URI.');
             }
 
-            const data = await response.json(); // Extract API response
+            // Compress the image
+            const compressedPhoto = await ImageManipulator.manipulateAsync(
+                photo.uri,
+                [{ resize: { width: 1024 } }], // Adjust width as needed
+                { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG } // Adjust quality and format
+            );
 
-            setLoading(false); // Hide loading screen
-            navigation.navigate('ScannedItems', { scannedItems: data.line_items }); // Navigate with data
-        } catch (error) {
+            const response = await fetch(compressedPhoto.uri);
+            const blob = await response.blob();
+
+            const storageRef = ref(storage, `images/${Date.now()}.jpg`);
+
+            await uploadBytes(storageRef, blob);
+
+            const downloadURL = await getDownloadURL(storageRef);
+
+            console.log('Download URL:', downloadURL);
+
+            //get veryfi response
+            const apiResponse = await fetch('http://192.168.8.159:5000/upload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ imageUrl: downloadURL }),
+            });
+
+            if (!apiResponse.ok) {
+                throw new Error('API upload failed');
+            }
+
+            const apiData = await apiResponse.json();
+
             setLoading(false);
-            Alert.alert('Error', 'Failed to upload receipt. Please try again.');
-            console.error(error);
+            navigation.navigate('ScannedItems', { scannedItems: apiData.line_items });
+
+        } catch (error) {
+            console.error('Upload error:', error);
+            setLoading(false);
+            Alert.alert('Error', 'Failed to upload image. Please try again.');
         }
     };
 

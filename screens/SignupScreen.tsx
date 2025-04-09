@@ -189,7 +189,9 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
                 email: email,
                 members: {},
                 ...(photoBase64 && { photoBase64: photoBase64 }), // Only include if exists
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                receiptURL: null
+
             };
 
 

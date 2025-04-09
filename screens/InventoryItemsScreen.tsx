@@ -2,69 +2,127 @@ import Footer from '@/components/Footer';
 import { RootStackParamList } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Easing, ScrollView } from 'react-native';
+import { auth, db } from '../firebaseConfig';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 
 type InventoryItemScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
 type Props = {
-  navigation: InventoryItemScreenNavigationProp;
+    navigation: InventoryItemScreenNavigationProp;
 };
 
 type InventoryItem = {
     id: string;
-    name: string;
+    description: string;
     quantity: number;
     price: number;
-    expiryDate?: string; // Optional expiry date
+    expiryDate?: string;
 };
 
 const getDaysUntilExpiry = (expiryDate?: string) => {
-    if (!expiryDate) return null; // No expiry date
+    if (!expiryDate) return null;
     const today = new Date();
     const expiry = new Date(expiryDate);
     const diffTime = expiry.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Convert milliseconds to days
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
-// Dummy data with expiry dates
-const inventoryData: InventoryItem[] = [
-    { id: '1', name: 'Item Name', quantity: 2, price: 350 }, // No expiry date
-    { id: '2', name: 'Item Name', quantity: 2, price: 350, expiryDate: '2025-03-23' }, // 2 days left
-    { id: '3', name: 'Item Name', quantity: 2, price: 350, expiryDate: '2025-03-25' }, // 4 days left
-    { id: '4', name: 'Item Name', quantity: 2, price: 350, expiryDate: '2025-03-29' }, // 8 days left
-    { id: '5', name: 'Item Name', quantity: 2, price: 350 }, // No expiry date
-];
-
-// Function to determine background color
 const getBackgroundColor = (expiryDays: number | null) => {
-    if (expiryDays === null) return '#D3D3D3'; // No expiry date (Gray)
-    if (expiryDays <= 2) return '#FF6B6B'; // Red (Expiring soon)
-    if (expiryDays <= 5) return '#90EE90'; // Green (Safe)
-    if (expiryDays > 5) return '#FFFF99'; // Yellow (Longer time left)
-    return '#D3D3D3'; // Default Gray
+    if (expiryDays === null) return '#D3D3D3';
+    if (expiryDays <= 2) return '#FF6B6B';
+    if (expiryDays <= 5) return '#90EE90';
+    if (expiryDays > 5) return '#FFFF99';
+    return '#D3D3D3';
 };
 
 const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
+    const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const spinValue = useState(new Animated.Value(0))[0];
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(spinValue, {
+                toValue: 1,
+                duration: 2000,
+                easing: Easing.linear,
+                useNativeDriver: true,
+            })
+        ).start();
+
+        if (auth.currentUser) {
+            const userUid = auth.currentUser.uid;
+            const inventoryCollectionRef = collection(db, 'users', userUid, 'inventory');
+            const q = query(inventoryCollectionRef);
+
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const items: InventoryItem[] = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...(doc.data() as Omit<InventoryItem, 'id'>),
+                }));
+                setInventoryItems(items);
+                setLoading(false);
+            });
+            return () => unsubscribe();
+        } else {
+            setLoading(false);
+        }
+    }, []);
+
+    const spin = spinValue.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg'],
+    });
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                    <ActivityIndicator size="large" color="black" />
+                </Animated.View>
+                <Text style={styles.loadingText}>Fetching Inventory...</Text>
+            </View>
+        );
+    }
+
+    if (inventoryItems.length === 0) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.title}>Inventory</Text>
+                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                    <Ionicons name="arrow-back" size={24} color="black" />
+                </TouchableOpacity>
+                <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>Inventory is empty</Text>
+                </View>
+                <Footer navigation={navigation} />
+            </View>
+        );
+    }
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Inventory</Text>
-            <TouchableOpacity style={styles.backButton} onPress={()=>navigation.goBack()}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <Ionicons name="arrow-back" size={24} color="black" />
             </TouchableOpacity>
-            <FlatList
-                data={inventoryData}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => {
+            <ScrollView>
+                {inventoryItems.map((item) => {
                     const expiryDays = getDaysUntilExpiry(item.expiryDate);
                     const backgroundColor = getBackgroundColor(expiryDays);
+                    const truncatedDescription = item.description.length > 25 ? item.description.substring(0, 25) + '...' : item.description;
 
                     return (
-                        <View style={[styles.itemContainer, { backgroundColor }]}>
-                            <View>
-                                <Text style={styles.itemName}>Item Name</Text>
-                                <Text style={styles.itemDetails}>{item.quantity}</Text>
-                                <Text style={styles.price}>Rs. {item.price}</Text>
+                        <View key={item.id} style={[styles.itemContainer, { backgroundColor }]}>
+                            <View style={styles.itemDetailsContainer}>
+                                <Text style={styles.itemName}>{truncatedDescription}</Text>
+                                <Text style={styles.itemQuantity}>Quantity: {item.quantity}</Text>
+                                <Text style={styles.itemPrice}>Price: Rs. {item.price}</Text>
+                                {item.expiryDate && (
+                                    <Text style={styles.itemExpiry}>Expiry: {item.expiryDate}</Text>
+                                )}
                             </View>
 
                             <View style={styles.rightSection}>
@@ -77,23 +135,39 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                                     <Text style={styles.expiryText}>Add Expiry Date</Text>
                                 )}
                             </View>
-                           
                         </View>
-                        
                     );
-                }}
-            />
-             <Footer navigation={navigation} />
+                })}
+            </ScrollView>
+            <Footer navigation={navigation} />
         </View>
     );
 };
 
-// Styles
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: 'white',
         padding: 16,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: 'gray',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyText: {
+        fontSize: 18,
+        color: 'gray',
     },
     title: {
         fontSize: 24,
@@ -109,16 +183,27 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         marginBottom: 10,
     },
+    itemDetailsContainer: {
+        flex: 1,
+    },
     itemName: {
         fontSize: 16,
         fontWeight: 'bold',
+        marginBottom: 4,
     },
-    itemDetails: {
+    itemQuantity: {
         fontSize: 14,
+        color: '#333',
+        marginBottom: 4,
     },
-    price: {
-        fontSize: 16,
-        fontWeight: 'bold',
+    itemPrice: {
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 4,
+    },
+    itemExpiry: {
+        fontSize: 14,
+        color: '#333',
     },
     rightSection: {
         alignItems: 'flex-end',

@@ -1,13 +1,21 @@
-from flask import Flask, jsonify
+# server.py
+from flask import Flask, jsonify, request
 import subprocess
 import json
+import os
 
 app = Flask(__name__)
 
 @app.route('/upload', methods=['POST'])
 def upload():
     try:
-        result = subprocess.run(['python', 'main.py'], capture_output=True, text=True)
+        data = request.get_json()
+        image_url = data.get('imageUrl')
+
+        if not image_url:
+            return jsonify({'status': 'error', 'message': 'imageUrl is required'}), 400
+
+        result = subprocess.run(['python', 'main.py', image_url], capture_output=True, text=True) #pass image url as argument.
         print("Subprocess Error:", result.stderr)
 
         api_response = result.stdout.strip()

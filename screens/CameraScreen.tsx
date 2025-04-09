@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Button, SafeAreaView } from 'react-native';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions, CameraCapturedPicture } from 'expo-camera';
 import PhotoPreviewSection from './PhotoPreviewScreen';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
-import { RootStackParamList } from '@/types';
+import { RootStackParamList } from '@/navigation/AppNavigator';
 
 type CameraScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Profile'>;
 
@@ -13,7 +13,7 @@ export default function CameraScreen() {
   const navigation = useNavigation<CameraScreenNavigationProp>(); // ✅ Get navigation
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
-  const [photo, setPhoto] = useState<any>(null);
+  const [photo, setPhoto] = useState<CameraCapturedPicture | null>();
   const cameraRef = useRef<CameraView | null>(null);
 
   if (!permission) return <View />;
