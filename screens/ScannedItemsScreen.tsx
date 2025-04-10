@@ -61,11 +61,12 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
         setLoading(true);
         try {
             const userUid = auth.currentUser.uid;
-            const inventoryCollectionRef = collection(db, 'users', userUid, 'inventory');
+            const inventoryCollectionRef = collection(db, 'inventory'); // Changed to 'inventory' collection
 
             for (const item of scannedItems) {
                 const priority = itemPriorities[item.id] || DEFAULT_PRIORITY;
                 await addDoc(inventoryCollectionRef, {
+                    uid: userUid, // Added user's UID to the item data
                     description: item.description,
                     unitprice: item.price,
                     quantity: item.quantity,
@@ -103,17 +104,17 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
                     <View style={styles.detailsRow}>
                         {/* Quantity */}
                         <View style={styles.detailItem}>
-                             <Ionicons name="file-tray-stacked-outline" size={16} color="#555" style={styles.detailIcon}/>
-                             <Text style={styles.detailText}>Qty: {item.quantity ?? 'N/A'}</Text>
+                            <Ionicons name="file-tray-stacked-outline" size={16} color="#555" style={styles.detailIcon}/>
+                            <Text style={styles.detailText}>Qty: {item.quantity ?? 'N/A'}</Text>
                         </View>
-                         {/* Unit Price */}
-                         <View style={styles.detailItem}>
-                             <Ionicons name="pricetag-outline" size={16} color="#555" style={styles.detailIcon}/>
-                             <Text style={styles.detailText}>Unit: Rs. {unitPrice}</Text>
-                        </View>
-                         {/* Total Price */}
+                        {/* Unit Price */}
                         <View style={styles.detailItem}>
-                             <Ionicons name="cash-outline" size={16} color="#555" style={styles.detailIcon}/>
+                            <Ionicons name="pricetag-outline" size={16} color="#555" style={styles.detailIcon}/>
+                            <Text style={styles.detailText}>Unit: Rs. {unitPrice}</Text>
+                        </View>
+                        {/* Total Price */}
+                        <View style={styles.detailItem}>
+                            <Ionicons name="cash-outline" size={16} color="#555" style={styles.detailIcon}/>
                             <Text style={styles.detailText}>Total: Rs. {totalPrice}</Text>
                         </View>
                     </View>
@@ -148,17 +149,17 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
                 {/* Checkbox Area */}
                 <View style={styles.checkboxContainer}>
                     <TouchableOpacity onPress={() => toggleCheckbox(item.id)} style={styles.checkboxTouchable}>
-                         <FontAwesome
-                             name={checkedItems[item.id] ? 'check-square' : 'square-o'}
-                             size={28} // Slightly smaller
-                             color={checkedItems[item.id] ? '#007AFF' : '#8E8E93'} // Use iOS blue / gray
-                         />
+                        <FontAwesome
+                            name={checkedItems[item.id] ? 'check-square' : 'square-o'}
+                            size={28} // Slightly smaller
+                            color={checkedItems[item.id] ? '#007AFF' : '#8E8E93'} // Use iOS blue / gray
+                        />
                         <Text style={styles.checkboxLabel}>
                             Add
                             Expiry?
                         </Text>
-                     </TouchableOpacity>
-                 </View>
+                    </TouchableOpacity>
+                </View>
             </View>
         );
     };
@@ -177,11 +178,11 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
             </Text>
 
             {scannedItems.length === 0 && !loading ? (
-                 <View style={styles.emptyListContainer}>
-                     <Ionicons name="document-text-outline" size={50} color="gray" />
-                     <Text style={styles.emptyListText}>No items found from scan.</Text>
-                 </View>
-             ) : (
+                <View style={styles.emptyListContainer}>
+                    <Ionicons name="document-text-outline" size={50} color="gray" />
+                    <Text style={styles.emptyListText}>No items found from scan.</Text>
+                </View>
+            ) : (
                 <FlatList
                     data={scannedItems}
                     renderItem={renderItem}
@@ -191,14 +192,14 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
                 />
             )}
 
-         
-             <View style={styles.bottomButtonContainer}>
+
+            <View style={styles.bottomButtonContainer}>
                 <TouchableOpacity style={[styles.actionButton, styles.manualButton]} onPress={() => navigation.navigate('ManuallyAddItem')}>
                     <Ionicons name="create-outline" size={20} color="white" style={styles.buttonIcon} />
                     <Text style={styles.buttonText}>Add Manually</Text>
                 </TouchableOpacity>
 
-                <View style={{height: 10}} /> 
+                <View style={{height: 10}} />
 
                 {loading ? (
                     <View style={[styles.actionButton, styles.inventoryButton, {justifyContent: 'center'}]}>
@@ -206,7 +207,7 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
                     </View>
                 ) : (
                     <TouchableOpacity style={[styles.actionButton, styles.inventoryButton]} onPress={addToInventory}>
-                         <Ionicons name="checkmark-done-outline" size={20} color="white" style={styles.buttonIcon} />
+                        <Ionicons name="checkmark-done-outline" size={20} color="white" style={styles.buttonIcon} />
                         <Text style={styles.buttonText}>Add All to Inventory</Text>
                     </TouchableOpacity>
                 )}
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
         borderTopColor: '#EEE',
         paddingTop: 10,
     },
-     priorityLabel: {
+    priorityLabel: {
         fontSize: 13,
         fontWeight: '500',
         color: '#6C757D', // Gray label
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8F9FA', // Slightly different background
     },
     checkboxTouchable: {
-         alignItems: 'center', // Center icon and text
+        alignItems: 'center', // Center icon and text
     },
     checkboxLabel: {
         fontSize: 10,

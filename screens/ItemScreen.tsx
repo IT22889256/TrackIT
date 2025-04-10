@@ -26,15 +26,16 @@ type InventoryItem = {
     quantity: number;
     totalPrice: number;
     unitprice?: number;
-    expiryDate?: Timestamp | string;
+    expiryDate?: Timestamp | string | null;
     priority: 'Essential' | 'Important' | 'Optional';
     checked?: boolean;
     currentStock?: number;
     addedAt?: any;
+    uid: string; // Ensure uid is in the type
 };
 
 // Helper to format date
-const formatDisplayDate = (expiryDate?: Timestamp | string): string | null => {
+const formatDisplayDate = (expiryDate?: Timestamp | string | null): string | null => {
     if (!expiryDate) return null;
     let dateObj: Date | null = null;
     if (expiryDate instanceof Timestamp) {
@@ -53,15 +54,15 @@ const formatDisplayDate = (expiryDate?: Timestamp | string): string | null => {
 // --- Component ---
 const ItemScreen: React.FC<Props> = ({ navigation, route }) => {
     // Ensure item exists, handle gracefully if not (though navigation setup should prevent this)
-     if (!route.params?.item) {
-         // Optionally navigate back or show an error message
-         console.error("Item data missing in route params!");
-         // Example: Go back if item is missing
-         React.useEffect(() => {
-             navigation.goBack();
-         }, [navigation]);
-         return <View style={styles.container}><Text>Error loading item details.</Text></View>; // Or a loading indicator
-     }
+    if (!route.params?.item) {
+        // Optionally navigate back or show an error message
+        console.error("Item data missing in route params!");
+        // Example: Go back if item is missing
+        React.useEffect(() => {
+            navigation.goBack();
+        }, [navigation]);
+        return <View style={styles.container}><Text>Error loading item details.</Text></View>; // Or a loading indicator
+    }
     const { item } = route.params;
 
     const [editableStock, setEditableStock] = useState<string>(
@@ -78,8 +79,7 @@ const ItemScreen: React.FC<Props> = ({ navigation, route }) => {
         }
         setLoading(true);
         try {
-            const userUid = auth.currentUser.uid;
-            const itemDocRef = doc(db, 'users', userUid, 'inventory', item.id);
+            const itemDocRef = doc(db, 'inventory', item.id); // Reference the 'inventory' collection
             await deleteDoc(itemDocRef);
             // Don't setLoading(false) here because we navigate away
             Alert.alert("Success", `"${item.description}" removed from inventory.`);
@@ -134,8 +134,7 @@ const ItemScreen: React.FC<Props> = ({ navigation, route }) => {
         // --- Proceed with Update if stock is NOT zero ---
         setLoading(true);
         try {
-            const userUid = auth.currentUser.uid;
-            const itemDocRef = doc(db, 'users', userUid, 'inventory', item.id);
+            const itemDocRef = doc(db, 'inventory', item.id); // Reference the 'inventory' collection
 
             // Update only the currentStock field
             await updateDoc(itemDocRef, {
@@ -181,7 +180,7 @@ const ItemScreen: React.FC<Props> = ({ navigation, route }) => {
                         <Text style={styles.detailLabel}>Priority:</Text>
                         <Text style={[styles.detailValue, styles[`priority${item.priority}`]]}>{item.priority}</Text>
                     </View>
-                     <View style={styles.detailRow}>
+                    <View style={styles.detailRow}>
                         <Ionicons name="file-tray-stacked-outline" size={18} color="#555" />
                         <Text style={styles.detailLabel}>Quantity Purchased:</Text>
                         <Text style={styles.detailValue}>{displayPurchaseQuantity}</Text>
@@ -191,7 +190,7 @@ const ItemScreen: React.FC<Props> = ({ navigation, route }) => {
                         <Text style={styles.detailLabel}>Unit Price:</Text>
                         <Text style={styles.detailValue}>Rs. {displayUnitPrice}</Text>
                     </View>
-                     <View style={styles.detailRow}>
+                    <View style={styles.detailRow}>
                         <Ionicons name="cash-outline" size={18} color="#555" />
                         <Text style={styles.detailLabel}>Total Purchase Price:</Text>
                         <Text style={styles.detailValue}>Rs. {displayTotalPrice}</Text>
@@ -316,7 +315,7 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 2,
     },
-     updateInstructions: {
+    updateInstructions: {
         fontSize: 14,
         color: '#666',
         marginBottom: 15,

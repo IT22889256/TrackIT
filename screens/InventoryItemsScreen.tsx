@@ -5,7 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Easing } from 'react-native';
 import { auth, db } from '../firebaseConfig'; // Ensure path is correct
-import { collection, query, onSnapshot, Timestamp } from 'firebase/firestore'; // Import Timestamp
+import { collection, query, onSnapshot, Timestamp, where } from 'firebase/firestore'; // Import where
 
 // --- Types ---
 type InventoryItemScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>; // Adjust screen name if needed
@@ -23,15 +23,16 @@ type InventoryItem = {
     description: string;
     currentStock: number;
     totalPrice: number;
-    expiryDate?: Timestamp | string; // Can be Firestore Timestamp or string
+    expiryDate?: Timestamp | string | null; // Can be Firestore Timestamp, string, or null
     priority: PriorityLevel; // Add priority field
+    uid: string; // Add uid field
     // unitprice?: number; // Include if you save/need unit price
 };
 
 // --- Helper Functions ---
 
 // Converts Firestore Timestamp or string to Date object
-const getDateFromExpiry = (expiryDate?: Timestamp | string): Date | null => {
+const getDateFromExpiry = (expiryDate?: Timestamp | string | null): Date | null => {
     if (!expiryDate) return null;
     if (expiryDate instanceof Timestamp) {
         return expiryDate.toDate();
@@ -108,19 +109,17 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
     useEffect(() => {
         if (auth.currentUser) {
             const userUid = auth.currentUser.uid;
-            const inventoryCollectionRef = collection(db, 'users', userUid, 'inventory');
-            const q = query(inventoryCollectionRef); // Add ordering later if needed (e.g., orderBy('description'))
+            const inventoryCollectionRef = collection(db, 'inventory'); // Reference the 'inventory' collection
+            const q = query(inventoryCollectionRef, where('uid', '==', userUid)); // Query for items with the current user's UID
 
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const items: InventoryItem[] = snapshot.docs.map((doc) => {
-                     // Cast data, ensuring priority is included
                     const data = doc.data() as Omit<InventoryItem, 'id'>;
-                     return {
+                    return {
                         id: doc.id,
                         ...data,
-                        // Ensure priority has a default if missing in Firestore for some reason
                         priority: data.priority || 'Important',
-                    };
+                    } as InventoryItem; // Type assertion to InventoryItem
                 });
                 setInventoryItems(items);
                 setLoading(false);
@@ -159,14 +158,14 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     if (!auth.currentUser) {
-         return (
-             <View style={styles.emptyContainer}>
-                 <Ionicons name="log-in-outline" size={50} color="gray" />
-                 <Text style={styles.emptyText}>Please log in to view your inventory.</Text>
-                 {/* Optional: Add a login button */}
-                 <Footer navigation={navigation} />
-             </View>
-         );
+        return (
+            <View style={styles.emptyContainer}>
+                <Ionicons name="log-in-outline" size={50} color="gray" />
+                <Text style={styles.emptyText}>Please log in to view your inventory.</Text>
+                {/* Optional: Add a login button */}
+                <Footer navigation={navigation} />
+            </View>
+        );
     }
 
 
@@ -180,7 +179,7 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                 </TouchableOpacity>
 
                 <View style={styles.emptyContainer}>
-                     <Ionicons name="cube-outline" size={50} color="gray" />
+                    <Ionicons name="cube-outline" size={50} color="gray" />
                     <Text style={styles.emptyText}>Your inventory is empty.</Text>
                     <Text style={styles.emptySubText}>Scan a receipt or add items manually!</Text>
                 </View>
@@ -209,62 +208,62 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                     return (
                         // Item Card
                         <TouchableOpacity
-                                key={item.id}
-                                onPress={() => navigation.navigate('ItemScreen', { item: item })} // Pass the whole item object
-                                activeOpacity={0.7} // Optional: visual feedback on press
+                            key={item.id}
+                            onPress={() => navigation.navigate('ItemScreen', { item: item })} // Pass the whole item object
+                            activeOpacity={0.7} // Optional: visual feedback on press
                         >
-                        <View key={item.id} style={[styles.itemCard, { borderLeftColor: expiryBgColor }]}>
-                            {/* Priority Badge */}
-                             <View style={[styles.priorityBadge, priorityBadgeStyle]}>
-                                 <Text style={styles.priorityBadgeText}>{item.priority}</Text>
-                             </View>
-
-                            {/* Item Details Section */}
-                            <View style={styles.itemContent}>
-                                <Text style={styles.itemName} numberOfLines={2}>{item.description}</Text>
-
-                                <View style={styles.itemDetailRow}>
-                                    <Ionicons name="file-tray-stacked-outline" size={16} color="#555" />
-                                    <Text style={styles.itemDetailText}>Quantity: {item.currentStock ?? 'N/A'}</Text>
+                            <View style={[styles.itemCard, { borderLeftColor: expiryBgColor }]}>
+                                {/* Priority Badge */}
+                                <View style={[styles.priorityBadge, priorityBadgeStyle]}>
+                                    <Text style={styles.priorityBadgeText}>{item.priority}</Text>
                                 </View>
 
-                                <View style={styles.itemDetailRow}>
-                                     <Ionicons name="cash-outline" size={16} color="#555" />
-                                    {/* Display Total Price, consider adding Unit Price if available */}
-                                    <Text style={styles.itemDetailText}>Total Price: Rs. {item.totalPrice?.toFixed(2) ?? 'N/A'}</Text>
-                                </View>
+                                {/* Item Details Section */}
+                                <View style={styles.itemContent}>
+                                    <Text style={styles.itemName} numberOfLines={2}>{item.description}</Text>
 
-                                {displayExpiryDate ? (
                                     <View style={styles.itemDetailRow}>
-                                        <Ionicons name="calendar-outline" size={16} color="#555" />
-                                        <Text style={styles.itemDetailText}>Expires: {displayExpiryDate}</Text>
+                                        <Ionicons name="file-tray-stacked-outline" size={16} color="#555" />
+                                        <Text style={styles.itemDetailText}>Quantity: {item.currentStock ?? 'N/A'}</Text>
                                     </View>
-                                ) : (
-                                     <View style={styles.itemDetailRow}>
-                                        <Ionicons name="calendar-outline" size={16} color="#888" />
-                                        {/* Optional: Add touchable to add date */}
-                                        <Text style={[styles.itemDetailText, { color: '#888' }]}>No Expiry Date Set</Text>
-                                    </View>
-                                )}
-                             </View>
 
-                             {/* Expiry Status Section */}
-                             <View style={styles.expiryStatus}>
-                                 {expiryDays !== null ? (
-                                     <>
-                                         <Text style={[styles.expiryDaysNumber, expiryDays < 0 ? styles.expiryDaysExpired : (expiryDays <= 7 ? styles.expiryDaysSoon : null)]}>
-                                             {expiryDays < 0 ? Math.abs(expiryDays) : expiryDays}
-                                         </Text>
-                                         <Text style={styles.expiryDaysText}>
-                                             {expiryDays < 0 ? (expiryDays === -1 ? 'Day Ago' : 'Days Ago') : (expiryDays === 1 ? 'Day Left' : 'Days Left')}
-                                         </Text>
-                                     </>
-                                 ) : (
-                                     // Placeholder or button to add expiry
-                                      <Ionicons name="add-circle-outline" size={24} color="#AAA" />
-                                 )}
-                             </View>
-                        </View></TouchableOpacity>
+                                    <View style={styles.itemDetailRow}>
+                                        <Ionicons name="cash-outline" size={16} color="#555" />
+                                        {/* Display Total Price, consider adding Unit Price if available */}
+                                        <Text style={styles.itemDetailText}>Total Price: Rs. {item.totalPrice?.toFixed(2) ?? 'N/A'}</Text>
+                                    </View>
+
+                                    {displayExpiryDate ? (
+                                        <View style={styles.itemDetailRow}>
+                                            <Ionicons name="calendar-outline" size={16} color="#555" />
+                                            <Text style={styles.itemDetailText}>Expires: {displayExpiryDate}</Text>
+                                        </View>
+                                    ) : (
+                                        <View style={styles.itemDetailRow}>
+                                            <Ionicons name="calendar-outline" size={16} color="#888" />
+                                            {/* Optional: Add touchable to add date */}
+                                            <Text style={[styles.itemDetailText, { color: '#888' }]}>No Expiry Date Set</Text>
+                                        </View>
+                                    )}
+                                </View>
+
+                                {/* Expiry Status Section */}
+                                <View style={styles.expiryStatus}>
+                                    {expiryDays !== null ? (
+                                        <>
+                                            <Text style={[styles.expiryDaysNumber, expiryDays < 0 ? styles.expiryDaysExpired : (expiryDays <= 7 ? styles.expiryDaysSoon : null)]}>
+                                                {expiryDays < 0 ? Math.abs(expiryDays) : expiryDays}
+                                            </Text>
+                                            <Text style={styles.expiryDaysText}>
+                                                {expiryDays < 0 ? (expiryDays === -1 ? 'Day Ago' : 'Days Ago') : (expiryDays === 1 ? 'Day Left' : 'Days Left')}
+                                            </Text>
+                                        </>
+                                    ) : (
+                                        // Placeholder or button to add expiry
+                                        <Ionicons name="add-circle-outline" size={24} color="#AAA" />
+                                    )}
+                                </View>
+                            </View></TouchableOpacity>
                     );
                 })}
             </ScrollView>
@@ -323,7 +322,7 @@ const styles = StyleSheet.create({
         top: 50, // Match title margin top
         left: 16,
         zIndex: 1, // Ensure it's above other elements
-         padding: 5, // Make touch target bigger
+        padding: 5, // Make touch target bigger
     },
     scrollContentContainer: {
         paddingHorizontal: 16,
@@ -405,10 +404,10 @@ const styles = StyleSheet.create({
         color: '#28A745', // Default green
     },
     expiryDaysSoon: {
-       color: '#FFC107', // Yellow/Orange for soon
+        color: '#FFC107', // Yellow/Orange for soon
     },
-     expiryDaysExpired: {
-       color: '#DC3545', // Red for expired/past
+    expiryDaysExpired: {
+        color: '#DC3545', // Red for expired/past
     },
     expiryDaysText: {
         fontSize: 10,
