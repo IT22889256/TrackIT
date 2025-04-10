@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Easing } from 'react-native';
 import { auth, db } from '../firebaseConfig'; // Ensure path is correct
 import { collection, query, onSnapshot, Timestamp, where } from 'firebase/firestore'; // Import where
+import { RouteProp } from '@react-navigation/native';
 
 // --- Types ---
 type InventoryItemScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>; // Adjust screen name if needed
@@ -210,7 +211,20 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                         // Item Card
                         <TouchableOpacity
                             key={item.id}
-                            onPress={() => navigation.navigate('ItemScreen', { item: item })} // Pass the whole item object
+                            onPress={() => {
+                                // Format the expiry date before passing to the next screen
+                                const formattedExpiry = displayExpiryDate || null;
+                                navigation.navigate('ItemScreen', {
+                                    itemId: item.id,
+                                    description: item.description,
+                                    currentStock: item.currentStock,
+                                    totalPrice: item.totalPrice,
+                                    expiryDate: formattedExpiry, // Pass the formatted date or null
+                                    priority: item.priority,
+                                    uid: item.uid,
+                                    measurementUnit: item.measurementUnit,
+                                });
+                            }}
                             activeOpacity={0.7} // Optional: visual feedback on press
                         >
                             <View style={[styles.itemCard, { borderLeftColor: expiryBgColor }]}>
