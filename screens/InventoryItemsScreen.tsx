@@ -26,6 +26,7 @@ type InventoryItem = {
     expiryDate?: Timestamp | string | null; // Can be Firestore Timestamp, string, or null
     priority: PriorityLevel; // Add priority field
     uid: string; // Add uid field
+    measurementUnit: string;
     // unitprice?: number; // Include if you save/need unit price
 };
 
@@ -224,7 +225,7 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
 
                                     <View style={styles.itemDetailRow}>
                                         <Ionicons name="file-tray-stacked-outline" size={16} color="#555" />
-                                        <Text style={styles.itemDetailText}>Quantity: {item.currentStock ?? 'N/A'}</Text>
+                                        <Text style={styles.itemDetailText}>Quantity: {item.currentStock ?? 'N/A'} {item.measurementUnit}</Text>
                                     </View>
 
                                     <View style={styles.itemDetailRow}>

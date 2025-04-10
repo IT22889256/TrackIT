@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, FlatList, TouchableOpacity, StyleSheet,
-    ActivityIndicator, Alert
+    ActivityIndicator, Alert, TextInput
 } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons'; // Ensure Ionicons is imported
 import { RouteProp } from '@react-navigation/native';
@@ -14,6 +14,11 @@ import { StackNavigationProp } from '@react-navigation/stack';
 type PriorityLevel = 'Essential' | 'Important' | 'Optional';
 const priorityLevels: PriorityLevel[] = ['Essential', 'Important', 'Optional'];
 const DEFAULT_PRIORITY: PriorityLevel = 'Important';
+
+// --- Unit Setup ---
+type MeasurementUnit = 'Unit' | 'Kg' | 'g';
+const measurementUnits: MeasurementUnit[] = ['Unit', 'Kg', 'g'];
+const DEFAULT_UNIT: MeasurementUnit = 'Unit';
 
 // --- Navigation/Props ---
 type ScannedItemsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ScannedItems'>;
@@ -37,6 +42,12 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
     const { scannedItems } = route.params;
     const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
     const [itemPriorities, setItemPriorities] = useState<Record<string, PriorityLevel>>({});
+    const [itemDescriptions, setItemDescriptions] = useState<Record<string, string>>(
+        scannedItems.reduce((acc, item) => ({ ...acc, [item.id]: item.description }), {})
+    );
+    const [itemMeasurementUnits, setItemMeasurementUnits] = useState<Record<string, MeasurementUnit>>(
+        scannedItems.reduce((acc, item) => ({ ...acc, [item.id]: DEFAULT_UNIT }), {})
+    );
     const [loading, setLoading] = useState(false);
 
     const toggleCheckbox = (id: string) => {
@@ -53,6 +64,14 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
         }));
     };
 
+    const updateItemDescription = (id: string, newDescription: string) => {
+        setItemDescriptions((prev) => ({ ...prev, [id]: newDescription }));
+    };
+
+    const selectMeasurementUnit = (id: string, unit: MeasurementUnit) => {
+        setItemMeasurementUnits((prev) => ({ ...prev, [id]: unit }));
+    };
+
     const addToInventory = async () => {
         if (!auth.currentUser) {
             Alert.alert('Error', 'User not authenticated.');
@@ -65,16 +84,26 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
 
             for (const item of scannedItems) {
                 const priority = itemPriorities[item.id] || DEFAULT_PRIORITY;
+                const description = itemDescriptions[item.id] || item.description;
+                const measurementUnit = itemMeasurementUnits[item.id] || DEFAULT_UNIT;
+                let quantityToStore = item.quantity;
+
+                if (measurementUnit === 'Unit') {
+                    quantityToStore = parseFloat(item.quantity.toFixed(1));
+                }
+
                 await addDoc(inventoryCollectionRef, {
                     uid: userUid, // Added user's UID to the item data
-                    description: item.description,
+                    description: description, // Use potentially updated description
                     unitprice: item.price,
-                    quantity: item.quantity,
-                    currentStock: item.quantity,
+                    quantity: quantityToStore,
+                    measurementUnit: measurementUnit, // Store the selected unit
+                    currentStock: quantityToStore,
                     totalPrice: item.price * item.quantity,
                     addedAt: new Date(),
                     checked: checkedItems[item.id] || false, // This flags if user wants to add expiry later
                     priority: priority,
+                    expiryDate: null, // Initially set expiryDate to null
                 });
             }
 
@@ -93,12 +122,20 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
     const renderItem = ({ item }: { item: ScannedItem }) => {
         const totalPrice = (item.price * item.quantity).toFixed(2);
         const unitPrice = item.price?.toFixed(2) ?? 'N/A';
+        const currentDescription = itemDescriptions[item.id] || item.description;
+        const currentUnit = itemMeasurementUnits[item.id] || DEFAULT_UNIT;
 
         return (
             <View style={styles.itemCard}>
                 {/* Main Content Area */}
                 <View style={styles.itemContent}>
-                    <Text style={styles.itemName} numberOfLines={2}>{item.description}</Text>
+                    <TextInput
+                        style={[styles.itemName, styles.editableItemName]}
+                        numberOfLines={2}
+                        value={currentDescription}
+                        onChangeText={(text) => updateItemDescription(item.id, text)}
+                        placeholder="Item Name"
+                    />
 
                     {/* Details Row */}
                     <View style={styles.detailsRow}>
@@ -116,6 +153,32 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
                         <View style={styles.detailItem}>
                             <Ionicons name="cash-outline" size={16} color="#555" style={styles.detailIcon}/>
                             <Text style={styles.detailText}>Total: Rs. {totalPrice}</Text>
+                        </View>
+                    </View>
+
+                    {/* Measurement Unit Selection */}
+                    <View style={styles.unitSection}>
+                        <Text style={styles.unitLabel}>Select Unit:</Text>
+                        <View style={styles.unitButtonsContainer}>
+                            {measurementUnits.map((unit) => (
+                                <TouchableOpacity
+                                    key={unit}
+                                    style={[
+                                        styles.unitButton,
+                                        currentUnit === unit && styles.unitButtonSelected,
+                                    ]}
+                                    onPress={() => selectMeasurementUnit(item.id, unit)}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.unitButtonText,
+                                            currentUnit === unit && styles.unitButtonTextSelected,
+                                        ]}
+                                    >
+                                        {unit}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
                         </View>
                     </View>
 
@@ -174,7 +237,7 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
 
             <Text style={styles.title}>Review Scanned Items</Text>
             <Text style={styles.note}>
-                Adjust priority and check box to add expiry date later in inventory.
+                Adjust name, select unit, priority and check box to add expiry date later in inventory.
             </Text>
 
             {scannedItems.length === 0 && !loading ? (
@@ -279,20 +342,25 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#212529',
-        marginBottom: 10,
+        marginBottom: 5, // Reduced margin for better spacing with other elements
+    },
+    editableItemName: {
+        borderBottomWidth: 1,
+        borderBottomColor: '#ddd',
+        paddingVertical: 5,
     },
     detailsRow: {
         flexDirection: 'row',
         justifyContent: 'space-between', // Space out details
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 8, // Reduced margin
         flexWrap: 'wrap', // Allow wrapping on small screens if needed
     },
     detailItem: {
         flexDirection: 'row',
         alignItems: 'center',
         marginRight: 10, // Space between detail items
-        marginBottom: 5, // Space if wrapping
+        marginBottom: 3, // Reduced margin if wrapping
     },
     detailIcon: {
         marginRight: 5,
@@ -303,7 +371,7 @@ const styles = StyleSheet.create({
     },
     // Priority Styles adapted for Card
     prioritySection: {
-        marginTop: 8,
+        marginTop: 10, // Adjusted margin
         borderTopWidth: 1,
         borderTopColor: '#EEE',
         paddingTop: 10,
@@ -391,6 +459,44 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: '600', // Medium weight
+    },
+    // Unit Selection Styles
+    unitSection: {
+        marginTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: '#EEE',
+        paddingTop: 10,
+    },
+    unitLabel: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#6C757D',
+        marginBottom: 6,
+    },
+    unitButtonsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    },
+    unitButton: {
+        borderWidth: 1,
+        borderColor: '#007AFF', // iOS Blue
+        borderRadius: 15,
+        paddingVertical: 4,
+        paddingHorizontal: 12,
+        marginRight: 8,
+        marginBottom: 6,
+        backgroundColor: 'white',
+    },
+    unitButtonSelected: {
+        backgroundColor: '#007AFF', // iOS Blue fill
+    },
+    unitButtonText: {
+        color: '#007AFF', // iOS Blue text
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    unitButtonTextSelected: {
+        color: 'white',
     },
     // separator: { // Optional separator style
     //     height: 1,
