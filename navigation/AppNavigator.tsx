@@ -31,6 +31,8 @@ import ShoppingListScreen from '@/screens/ShoppingListScreen';
 import AddItemsScreen from '@/screens/AddItemsScreen';
 import EditItemsScreen from '@/screens/EditItemsScreen';
 import ItemDetailsScreen from '@/screens/ItemDetailsScreen';
+import ItemScreen from '@/screens/ItemScreen';
+
 
 
 export type RootStackParamList = {
@@ -59,6 +61,7 @@ export type RootStackParamList = {
   EditItems:undefined;
   ItemDetails:undefined;
   InventoryScreen:undefined;
+  ItemScreen: { item: InventoryItem };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -89,6 +92,7 @@ const AppNavigator = () => {
         <Stack.Screen name="EnterBudget" component={EnterBudgetScreen} options={{ headerShown: false }} />
         <Stack.Screen name="EditItems" component={EditItemsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ItemDetails" component={ItemDetailsScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ItemScreen" component={ItemScreen} options={{ headerShown: false }} />
 
       </Stack.Navigator>
     
