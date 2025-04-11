@@ -94,6 +94,7 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
 
                 await addDoc(inventoryCollectionRef, {
                     uid: userUid, // Added user's UID to the item data
+                    ownerId: userUid,
                     description: description, // Use potentially updated description
                     unitprice: item.price,
                     quantity: quantityToStore,
