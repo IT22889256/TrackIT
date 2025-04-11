@@ -20,7 +20,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system'; // Import FileSystem
+import * as FileSystem from 'expo-file-system';
 
 type SignupScreenNavigationProp = StackNavigationProp<
     RootStackParamList,
@@ -101,33 +101,41 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 0.7, // Reduced quality to limit file size
+            quality: 0.7,
         });
 
-        if (!result.canceled) {
-            // Check file size (optional)
-            if(result.assets && result.assets[0]){
-                const fileInfo = await FileSystem.getInfoAsync(result.assets[0].uri);
-                if (fileInfo.size && fileInfo.size > 5 * 1024 * 1024) { // 2MB limit
-                    Alert.alert('Image too large', 'Please select an image smaller than 2MB');
-                    return;
-                }
-                setImage(result.assets[0].uri);
+        if (!result.canceled && result.assets && result.assets[0]) {
+            const fileInfo = await FileSystem.getInfoAsync(result.assets[0].uri);
+            if (fileInfo.size && fileInfo.size > 5 * 1024 * 1024) {
+                Alert.alert('Image too large', 'Please select an image smaller than 5MB');
+                return;
             }
-
+            setImage(result.assets[0].uri);
         }
     };
 
-    const convertImageToBase64 = async (uri: string) => {
+    const uploadImage = async (uri: string, userId: string) => {
+        setUploading(true);
         try {
-            // Read the file as base64 string
-            const base64 = await FileSystem.readAsStringAsync(uri, {
-                encoding: FileSystem.EncodingType.Base64,
-            });
-            return `data:image/jpeg;base64,${base64}`;
+            // Fetch the image blob from the URI
+            const response = await fetch(uri);
+            const blob = await response.blob();
+            
+            // Create a reference to the storage location
+            const storageRef = ref(storage, `profilePictures/${userId}`);
+            
+            // Upload the file
+            await uploadBytes(storageRef, blob);
+            
+            // Get the download URL
+            const downloadURL = await getDownloadURL(storageRef);
+            
+            return downloadURL;
         } catch (error) {
-            console.error("Error converting image to base64:", error);
-            return null;
+            console.error("Error uploading image:", error);
+            throw error;
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -168,6 +176,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
 
         setIsLoading(true);
         try {
+            // Create user account
             const userCredential = await createUserWithEmailAndPassword(
                 auth,
                 email,
@@ -175,25 +184,24 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
             );
             const user = userCredential.user;
 
-            let photoBase64 = null;
+            let photoURL = null;
             if (image) {
-                photoBase64 = await convertImageToBase64(image);
-                if (!photoBase64) {
-                    Alert.alert('Error', 'Failed to process profile image');
-                    return;
+                try {
+                    photoURL = await uploadImage(image, user.uid);
+                } catch (error) {
+                    console.error("Image upload failed, continuing without image", error);
+                    // Continue without image if upload fails
                 }
             }
 
+            // Create user document in Firestore
             const userData = {
                 name: name,
                 email: email,
-                members: {},
-                ...(photoBase64 && { photoBase64: photoBase64 }), // Only include if exists
+                ...(photoURL && { photoURL }), // Only include if exists
                 createdAt: new Date().toISOString(),
                 receiptURL: null
-
             };
-
 
             await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -224,6 +232,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
         return '';
     };
 
+    // ... rest of your component (styles and JSX remain the same)
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

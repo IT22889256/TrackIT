@@ -12,9 +12,10 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
-import { auth, db } from '../firebaseConfig';
+import { auth, db, storage } from '../firebaseConfig';
 import { deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
+import { ref, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useFonts } from 'expo-font';
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Profile'>;
@@ -52,9 +53,16 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                         setUserName(userData.name || 'User Name');
                         setEmail(userData.email || '@email.com');
                         
-                        // Check for Base64 image data
-                        if (userData.photoBase64) {
-                            setProfileImage(userData.photoBase64);
+                        // Check for Firebase Storage image URL
+                        if (userData.photoURL) {
+                            try {
+                                // Get the download URL from the reference
+                                const url = await getDownloadURL(ref(storage, userData.photoURL));
+                                setProfileImage(url);
+                            } catch (error) {
+                                console.error('Error fetching image from storage:', error);
+                                // If there's an error, we'll just proceed without the image
+                            }
                         }
                     }
                 }
@@ -97,9 +105,26 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                     style: 'destructive',
                     onPress: async () => {
                         if (auth.currentUser) {
-                            await deleteDoc(doc(db, 'users', auth.currentUser.uid));
-                            await deleteUser(auth.currentUser);
-                            navigation.navigate('Login');
+                            try {
+                                // Delete user document
+                                await deleteDoc(doc(db, 'users', auth.currentUser.uid));
+                                
+                                // Delete profile image from storage if it exists
+                                const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+                                if (userDoc.exists() && userDoc.data().photoURL) {
+                                    const imageRef = ref(storage, userDoc.data().photoURL);
+                                    await deleteObject(imageRef).catch(error => {
+                                        console.error("Error deleting profile image:", error);
+                                    });
+                                }
+                                
+                                // Delete user account
+                                await deleteUser(auth.currentUser);
+                                navigation.navigate('Login');
+                            } catch (error) {
+                                console.error("Error deleting account:", error);
+                                Alert.alert("Error", "Failed to delete account. Please try again.");
+                            }
                         }
                     },
                 },
@@ -107,7 +132,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         );
     };
 
-    // Animation handlers
+    // Animation handlers (remain the same)
     const handlePressIn = (animatedValue: Animated.Value) => {
         Animated.spring(animatedValue, {
             toValue: 0.95,
