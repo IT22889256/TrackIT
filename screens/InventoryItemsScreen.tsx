@@ -210,23 +210,12 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                     return (
                         // Item Card
                         <TouchableOpacity
-                            key={item.id}
-                            onPress={() => {
-                                // Format the expiry date before passing to the next screen
-                                const formattedExpiry = displayExpiryDate || null;
-                                navigation.navigate('ItemScreen', {
-                                    itemId: item.id,
-                                    description: item.description,
-                                    currentStock: item.currentStock,
-                                    totalPrice: item.totalPrice,
-                                    expiryDate: formattedExpiry, // Pass the formatted date or null
-                                    priority: item.priority,
-                                    uid: item.uid,
-                                    measurementUnit: item.measurementUnit,
-                                });
-                            }}
-                            activeOpacity={0.7} // Optional: visual feedback on press
-                        >
+                        key={item.id}
+                        onPress={() => {
+                            navigation.navigate('ItemScreen', { item: item });
+                        }}
+                        activeOpacity={0.7}
+                    >
                             <View style={[styles.itemCard, { borderLeftColor: expiryBgColor }]}>
                                 {/* Priority Badge */}
                                 <View style={[styles.priorityBadge, priorityBadgeStyle]}>

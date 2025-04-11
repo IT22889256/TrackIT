@@ -61,7 +61,7 @@ export type RootStackParamList = {
   EditItems:undefined;
   ItemDetails:undefined;
   InventoryScreen:undefined;
-  ItemScreen:{ item: InventoryItemsScreen };
+  ItemScreen: { item: InventoryItem };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();

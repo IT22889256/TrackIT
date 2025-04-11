@@ -23,15 +23,12 @@ type Props = {
 type InventoryItem = {
     id: string;
     description: string;
-    quantity: number;
+    currentStock: number;
     totalPrice: number;
-    unitprice?: number;
     expiryDate?: Timestamp | string | null;
     priority: 'Essential' | 'Important' | 'Optional';
-    checked?: boolean;
-    currentStock?: number;
-    addedAt?: any;
-    uid: string; // Ensure uid is in the type
+    uid: string;
+    measurementUnit: string;
 };
 
 // Helper to format date
@@ -66,7 +63,7 @@ const ItemScreen: React.FC<Props> = ({ navigation, route }) => {
     const { item } = route.params;
 
     const [editableStock, setEditableStock] = useState<string>(
-        item.currentStock?.toString() ?? item.quantity?.toString() ?? ''
+        item.currentStock?.toString() ?? ''
     );
     const [loading, setLoading] = useState(false);
 
@@ -154,9 +151,7 @@ const ItemScreen: React.FC<Props> = ({ navigation, route }) => {
 
     // Format details for display
     const displayExpiry = formatDisplayDate(item.expiryDate);
-    const displayUnitPrice = item.unitprice?.toFixed(2) ?? 'N/A';
     const displayTotalPrice = item.totalPrice?.toFixed(2) ?? 'N/A';
-    const displayPurchaseQuantity = item.quantity ?? 'N/A';
 
     return (
         <KeyboardAvoidingView
@@ -182,13 +177,8 @@ const ItemScreen: React.FC<Props> = ({ navigation, route }) => {
                     </View>
                     <View style={styles.detailRow}>
                         <Ionicons name="file-tray-stacked-outline" size={18} color="#555" />
-                        <Text style={styles.detailLabel}>Quantity Purchased:</Text>
-                        <Text style={styles.detailValue}>{displayPurchaseQuantity}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                        <Ionicons name="pricetag-outline" size={18} color="#555" />
-                        <Text style={styles.detailLabel}>Unit Price:</Text>
-                        <Text style={styles.detailValue}>Rs. {displayUnitPrice}</Text>
+                        <Text style={styles.detailLabel}>Current Stock:</Text>
+                        <Text style={styles.detailValue}>{item.currentStock} {item.measurementUnit}</Text>
                     </View>
                     <View style={styles.detailRow}>
                         <Ionicons name="cash-outline" size={18} color="#555" />
