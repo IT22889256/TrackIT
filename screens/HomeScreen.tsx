@@ -38,7 +38,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.logo}>LOGO</Text>
+                <Text style={styles.logo}>TrackIT</Text>
                 <TouchableOpacity style={styles.notificationIcon}>
                     <Ionicons name="notifications-outline" size={24} color="#333" />
                 </TouchableOpacity>
@@ -70,7 +70,9 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                         <Text style={styles.buttonText}>Expiry Items</Text>
                     </TouchableOpacity>
                 </View>
-                
+
+
+
 
                 {/* Budget Shopping List Section */}
                 <View style={styles.budgetSection}>
@@ -244,4 +246,3 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
-
