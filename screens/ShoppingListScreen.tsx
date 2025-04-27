@@ -264,16 +264,16 @@ const ShoppingListScreen = () => {
         );
     };
 
-    const handleShareList = () => {
-        if (!isOwner) {
-            Alert.alert('Permission Denied', 'Only the list owner can share the list.');
-            return;
-        }
-        navigation.navigate('ShareList', {
-            currentSharedWith: items[0]?.sharedWith || [],
-            ownerId: currentUserId
-        });
-    };
+    // const handleShareList = () => {
+    //     if (!isOwner) {
+    //         Alert.alert('Permission Denied', 'Only the list owner can share the list.');
+    //         return;
+    //     }
+    //     navigation.navigate('ShareList', {
+    //         currentSharedWith: items[0]?.sharedWith || [],
+    //         ownerId: currentUserId
+    //     });
+    // };
 
     return (
         <View style={styles.container}>
@@ -285,14 +285,14 @@ const ShoppingListScreen = () => {
                     {isOwner ? 'Your Shopping List' : 'Shared Shopping List'}
                 </Text>
                 <View style={styles.headerRight}>
-                    {isOwner && (
+                    {/* {isOwner && (
                         <TouchableOpacity
                             style={styles.shareButton}
                             onPress={handleShareList}
                         >
                             <Ionicons name="share-social" size={24} color="#000" />
                         </TouchableOpacity>
-                    )}
+                    )} */}
                     {isOwner && (
                         <TouchableOpacity
                             style={styles.clearAllButton}
@@ -338,7 +338,7 @@ const ShoppingListScreen = () => {
                         item={selectedItem}
                         onClose={() => setModalVisible(false)}
                         canEdit={selectedItem.ownerId === currentUserId ||
-                                 selectedItem.sharedWith?.includes(currentUserId || '')}
+                                selectedItem.sharedWith?.includes(currentUserId || '')}
                     />
                 )}
             </Modal>
