@@ -1,176 +1,302 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { 
-    View, Text, FlatList, TouchableOpacity, StyleSheet, Animated, ActivityIndicator 
+// BudgetListScreen.tsx
+import React, { useEffect, useRef } from 'react';
+import {
+    View, Text, FlatList, TouchableOpacity, StyleSheet,
+    Animated, SafeAreaView // Import SafeAreaView for better screen edges handling
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'; // Using Ionicons
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../navigation/AppNavigator'; // Adjust path if needed
-import Footer from '../components/Footer'; // Adjust path if needed
+import { RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/AppNavigator'; // Adjust path
+import Footer from '../components/Footer'; // Adjust path
 
+// Type for items coming from backend API
+type ShoppingListItemAPI = {
+    description: string;
+    quantity: string; // e.g., "1 kg", "100 g", "1 unit"
+    cost: number;
+    reason?: string; // Optional: why item was included
+};
+
+// --- Navigation Types ---
 type BudgetListScreenNavigationProp = StackNavigationProp<RootStackParamList, 'BudgetList'>;
+type BudgetListScreenRouteProp = RouteProp<RootStackParamList, 'BudgetList'>;
 
 type Props = {
     navigation: BudgetListScreenNavigationProp;
+    route: BudgetListScreenRouteProp;
 };
 
-type ShoppingItem = {
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-};
+const BudgetListScreen: React.FC<Props> = ({ navigation, route }) => {
+    // Get data from navigation parameters with defaults
+    const { generatedList = [], budget = 0 } = route.params || {};
 
-// Budget and Shopping List Data
-const BUDGET = 2000;
-const shoppingData: ShoppingItem[] = [
-    { id: '1', name: 'Item A', quantity: 2, price: 350 },
-    { id: '2', name: 'Item B', quantity: 2, price: 400 },
-    { id: '3', name: 'Item C', quantity: 2, price: 250 },
-    { id: '4', name: 'Item D', quantity: 2, price: 500 },
-    { id: '5', name: 'Item E', quantity: 2, price: 300 },
-];
+    // Calculate total price
+    const totalPrice = generatedList.reduce((sum, item) => sum + item.cost, 0);
 
-// Calculate total price
-const getTotalPrice = () => shoppingData.reduce((sum, item) => sum + item.price, 0);
-
-const BudgetListScreen: React.FC<Props> = ({ navigation }) => {
-    const totalPrice = getTotalPrice();
-
-    // Animation & Loading States
+    // Animation Ref for fade-in effect
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const [loading, setLoading] = useState(true);
 
-    // Simulate screen loading delay
     useEffect(() => {
-        setTimeout(() => {
-            setLoading(false);
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 800,
-                useNativeDriver: true,
-            }).start();
-        }, 2000); // 2 seconds delay before loading items
-    }, []);
+        fadeAnim.setValue(0); // Reset on data change
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+        }).start();
+    }, [generatedList, fadeAnim]); // Rerun if list data changes
 
-    return (
-        <View style={styles.container}>
-            {/* Back Button */}
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <Ionicons name="arrow-back" size={24} color="black" />
-            </TouchableOpacity>
+    // --- Render Item Function for FlatList ---
+    const renderShoppingItem = ({ item }: { item: ShoppingListItemAPI }) => (
+        <View style={styles.itemCard}>
+            {/* Icon Column */}
+            <View style={styles.itemIconContainer}>
+                 {/* Example: Generic list/cart item icon */}
+                 <Ionicons name="cube-outline" size={28} color="#4A90E2" />
+             </View>
 
-            {/* Title */}
-            <Text style={styles.title}>Budget Shopping List</Text>
+             {/* Details Column */}
+            <View style={styles.itemDetailsContainer}>
+                <Text style={styles.itemName} numberOfLines={2}>{item.description}</Text>
+                <Text style={styles.itemQuantity}>Buy: {item.quantity}</Text>
+                {item.reason && <Text style={styles.itemReason}>({item.reason})</Text>}
+            </View>
 
-            {/* Budget Display */}
-            <Text style={styles.budgetText}>
-                Your Budget: <Text style={{ color: '#FF6B6B' }}>Rs.{BUDGET}</Text>
-            </Text>
-
-            {/* Show Loader While Fetching Data */}
-            {loading ? (
-                <View style={styles.loaderContainer}>
-                    <ActivityIndicator size="large" color="#FF6B6B" />
-                    <Text style={styles.loadingText}>Loading items...</Text>
-                </View>
-            ) : (
-                <Animated.View style={{ opacity: fadeAnim }}>
-                    <FlatList
-                        data={shoppingData}
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity activeOpacity={0.8} style={styles.itemContainer}>
-                                <View>
-                                    <Text style={styles.itemName}>{item.name}</Text>
-                                    <Text style={styles.quantity}>Qty: {item.quantity}</Text>
-                                </View>
-                                <Text style={styles.price}>Rs. {item.price}</Text>
-                            </TouchableOpacity>
-                        )}
-                    />
-                </Animated.View>
-            )}
-
-            {/* Total Price */}
-            {!loading && (
-                <Text style={styles.totalPriceText}>
-                    Total Price: <Text style={{ color: totalPrice > BUDGET ? 'red' : '#2DCE89' }}>Rs.{totalPrice}</Text>
-                </Text>
-            )}
-
-            <Footer navigation={navigation} />
+            {/* Price Column */}
+            <View style={styles.itemPriceContainer}>
+                <Text style={styles.itemPrice}>Rs. {item.cost.toFixed(2)}</Text>
+            </View>
         </View>
+    );
+
+    // --- Main JSX ---
+    return (
+        // Use SafeAreaView for better handling of notches and screen edges
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.container}>
+                {/* Header Area */}
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                        <Ionicons name="arrow-back-circle-outline" size={30} color="#555" />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Budget Shopping List</Text>
+                    {/* Placeholder for potential right-side header action */}
+                    <View style={styles.headerRightPlaceholder} />
+                </View>
+
+                {/* Budget Info */}
+                <View style={styles.budgetInfoContainer}>
+                    <Ionicons name="wallet-outline" size={22} color="#666" />
+                    <Text style={styles.budgetText}>
+                        Your Budget: <Text style={styles.budgetAmount}>Rs. {budget.toFixed(2)}</Text>
+                    </Text>
+                </View>
+
+                {/* List or Empty State */}
+                {!generatedList || generatedList.length === 0 ? (
+                    <View style={styles.emptyListContainer}>
+                        <Ionicons name="basket-outline" size={60} color="#CCC" />
+                        <Text style={styles.emptyListText}>Shopping list is empty.</Text>
+                        <Text style={styles.emptyListSubText}>Either your inventory is full or no items matched the criteria within budget.</Text>
+                    </View>
+                ) : (
+                    <Animated.View style={{ opacity: fadeAnim, flex: 1 }}>
+                        <FlatList
+                            data={generatedList}
+                            renderItem={renderShoppingItem}
+                            keyExtractor={(item, index) => `${item.description}-${index}`}
+                            contentContainerStyle={styles.listContentContainer}
+                            ItemSeparatorComponent={() => <View style={styles.separator} />} // Add separators
+                        />
+                    </Animated.View>
+                )}
+
+                {/* Total Price Footer (only if list has items) */}
+                {generatedList && generatedList.length > 0 && (
+                    <View style={styles.totalFooter}>
+                        <Text style={styles.totalPriceLabel}>Estimated Total:</Text>
+                        <Text style={[
+                            styles.totalPriceValue,
+                            totalPrice > budget && styles.totalPriceOverBudget // Apply style if over budget
+                        ]}>
+                            Rs. {totalPrice.toFixed(2)}
+                        </Text>
+                        {totalPrice > budget && (
+                            <Text style={styles.warningText}>Exceeds Budget!</Text>
+                        )}
+                    </View>
+                )}
+            </View>
+             
+        </SafeAreaView>
     );
 };
 
-// Styles
+// --- Styles ---
 const styles = StyleSheet.create({
-    container: {
+    safeArea: {
         flex: 1,
-        backgroundColor: '#F7F9FC',
-        padding: 16,
+        backgroundColor: '#F4F6F8', // Light background for the safe area
+    },
+    container: {
+        flex: 1, // Takes available space within SafeAreaView
+        // Removed padding from container, handled by content containers
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 15,
+        paddingTop: 10, // Adjust as needed
+        paddingBottom: 10,
+        backgroundColor: '#FFFFFF', // White header background
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
     },
     backButton: {
-        position: 'absolute',
-        top: 20,
-        left: 16,
+        padding: 5, // Increase touch area
     },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: 20,
+        fontSize: 20, // Slightly smaller title
+        fontWeight: '600', // Semi-bold
         color: '#333',
+    },
+    headerRightPlaceholder: { // To balance the back button for center alignment
+        width: 30, // Approx width of the back button icon
+    },
+    budgetInfoContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 12,
+        backgroundColor: '#E9EEF2', // Light background strip for budget
+        borderBottomWidth: 1,
+        borderBottomColor: '#DDE4E8',
+        marginBottom: 5, // Space before list starts
     },
     budgetText: {
         fontSize: 16,
+        color: '#555',
+        marginLeft: 8,
+    },
+    budgetAmount: {
         fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: 10,
+        color: '#E67E22', // Orange color for budget amount
     },
-    loaderContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+    listContentContainer: {
+        paddingHorizontal: 16,
+        paddingVertical: 10, // Padding top/bottom for the list itself
+        paddingBottom: 150, // Extra space at the bottom for footer overlap
     },
-    loadingText: {
-        fontSize: 16,
-        marginTop: 10,
-        color: '#777',
-    },
-    itemContainer: {
+    itemCard: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         backgroundColor: '#FFFFFF',
-        padding: 16,
-        borderRadius: 12,
-        marginBottom: 10,
-        shadowColor: '#000',
+        borderRadius: 10,
+        padding: 12,
+        // marginBottom: 10, // Replaced by separator
+        shadowColor: '#B0B0B0',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
         elevation: 3,
+        alignItems: 'center', // Vertically center icon, details, price
+    },
+    itemIconContainer: {
+        marginRight: 12,
+        padding: 5,
+        // backgroundColor: '#EAF2FA', // Optional: Subtle background for icon
+        borderRadius: 20,
+    },
+    itemDetailsContainer: {
+        flex: 1, // Take available space
+        justifyContent: 'center',
     },
     itemName: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: 15, // Slightly smaller name
+        fontWeight: '500', // Medium weight
         color: '#333',
+        marginBottom: 3,
     },
-    quantity: {
+    itemQuantity: {
+        fontSize: 13,
+        color: '#666',
+        marginBottom: 3,
+    },
+    itemReason: {
+        fontSize: 11,
+        color: '#999',
+        fontStyle: 'italic',
+    },
+    itemPriceContainer: {
+        marginLeft: 10, // Space before price
+        alignItems: 'flex-end',
+    },
+    itemPrice: {
+        fontSize: 15,
+        fontWeight: '600', // Semi-bold price
+        color: '#2E7D32', // Green color for price
+    },
+    separator: {
+        height: 10, // Creates space between items
+    },
+    emptyListContainer: {
+        flex: 1, // Take remaining space
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        paddingBottom: 100, // Avoid footers
+    },
+    emptyListText: {
+        fontSize: 17,
+        fontWeight: '500',
+        color: '#777',
+        textAlign: 'center',
+        marginTop: 15,
+    },
+     emptyListSubText: {
         fontSize: 14,
-        color: 'gray',
+        color: '#999',
+        textAlign: 'center',
+        marginTop: 5,
     },
-    price: {
+    totalFooter: {
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#E0E0E0',
+        backgroundColor: '#FFFFFF', // White footer background
+        position: 'absolute', // Stick to bottom above main footer
+        bottom: 60, // Adjust based on main Footer height
+        left: 0,
+        right: 0,
+        flexDirection: 'row', // Align items horizontally
+        justifyContent: 'space-between', // Space out label and value
+        alignItems: 'center',
+        zIndex: 5, // Ensure it's above the list
+    },
+    totalPriceLabel: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#FF6B6B',
+        fontWeight: '500',
+        color: '#444',
     },
-    totalPriceText: {
+    totalPriceValue: {
         fontSize: 18,
         fontWeight: 'bold',
-        textAlign: 'center',
-        marginTop: 10,
+        color: '#28A745', // Default green color
     },
+    totalPriceOverBudget: {
+        color: '#DC3545', // Red color if over budget
+    },
+    warningText: {
+        position: 'absolute', // Position warning below the total
+        bottom: -16, // Adjust as needed
+        left: 0,
+        right: 0,
+        fontSize: 11,
+        color: '#DC3545',
+        textAlign: 'center',
+    },
+    // appFooter style removed, relies on Footer component's internal styling and positioning if absolute
 });
 
 export default BudgetListScreen;
