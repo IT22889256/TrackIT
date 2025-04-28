@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -7,7 +7,6 @@ const AddItemsScreen = () => {
     const [itemName, setItemName] = useState('');
     const [quantity, setQuantity] = useState(0);
     const [description, setDescription] = useState('');
-    const [addImage, setAddImage] = useState(false);
     const [itemNameError, setItemNameError] = useState('');
     const [quantityError, setQuantityError] = useState('');
 
@@ -37,16 +36,15 @@ const AddItemsScreen = () => {
             name: itemName,
             quantity: quantity,
             description: description,
-            addImage: addImage,
         };
 
         navigation.navigate('ShoppingList', { newItems: [newItem] }); // Send as an array
     };
 
     const handleGoBack = () => {
-      navigation.navigate('ShoppingList'); // Navigate to HomeScreen
-  };
-  
+        navigation.navigate('ShoppingList');
+    };
+    
     const incrementQuantity = () => {
         setQuantity((prevQuantity) => prevQuantity + 1);
     };
@@ -88,23 +86,6 @@ const AddItemsScreen = () => {
                 </View>
                 {quantityError ? <Text style={styles.errorText}>{quantityError}</Text> : null}
             </View>
-
-            <View style={styles.addImageContainer}>
-                <Text style={styles.label}>Add Image</Text>
-                <Switch
-                    trackColor={{ false: '#767577', true: '#81b0ff' }}
-                    thumbColor={addImage ? '#f5dd4b' : '#f4f3f4'}
-                    ios_backgroundColor="#3e3e3e"
-                    onValueChange={setAddImage}
-                    value={addImage}
-                />
-            </View>
-
-            {addImage && (
-                <View style={styles.imagePlaceholder}>
-                    <Text>Image Placeholder</Text>
-                </View>
-            )}
 
             <View style={styles.descriptionContainer}>
                 <Text style={styles.label}>Description</Text>
@@ -188,22 +169,6 @@ const styles = StyleSheet.create({
         color: '#000',
         minWidth: 40,
         textAlign: 'center',
-    },
-    addImageContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 15,
-    },
-    imagePlaceholder: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 50,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 15,
-        backgroundColor: '#E8E8E8',
     },
     descriptionContainer: {
         marginBottom: 20,

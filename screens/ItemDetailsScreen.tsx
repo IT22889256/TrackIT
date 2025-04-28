@@ -1,4 +1,3 @@
-
 // ItemDetailsScreen.js
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
@@ -14,7 +13,6 @@ interface Item {
     name: string;
     quantity: number;
     description: string;
-    addImage: boolean;
 }
 
 const ItemDetailsScreen = ({ item, onClose }: ItemDetailsProps) => {
@@ -28,7 +26,6 @@ const ItemDetailsScreen = ({ item, onClose }: ItemDetailsProps) => {
                     <Text style={styles.itemName}>{item.name}</Text>
                     <Text style={styles.detailText}>Quantity: {item.quantity}</Text>
                     <Text style={styles.detailText}>Description: {item.description}</Text>
-                    <Text style={styles.detailText}>Add Image: {item.addImage ? 'Yes' : 'No'}</Text>
                 </ScrollView>
             </View>
         </View>
