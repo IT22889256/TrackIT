@@ -220,6 +220,9 @@ const ItemScreen: React.FC<Props> = ({ navigation, route }) => {
                             <Text style={styles.updateButtonText}>Update Stock Level</Text>
                         )}
                     </TouchableOpacity>
+                    <TouchableOpacity style={styles.addItemButton} onPress={() => navigation.navigate('LabelScan')}>
+                                    <Text style={styles.EditButtonText}>Add Expiry Notification</Text>
+                                </TouchableOpacity>
                 </View>
 
             </ScrollView>
@@ -335,6 +338,18 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    EditButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    addItemButton: {
+        backgroundColor: '#6200ea',
+        paddingVertical: 15,
+        borderRadius: 12,
+        marginBottom: 20,
+        alignItems: 'center',
     },
 });
 
