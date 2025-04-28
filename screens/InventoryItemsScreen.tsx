@@ -1,15 +1,17 @@
-import Footer from '@/components/Footer'; // Ensure path is correct
-import { RootStackParamList } from '@/types'; // Ensure path is correct
+import Footer from '@/components/Footer';
+import { RootStackParamList } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Easing } from 'react-native';
-import { auth, db } from '../firebaseConfig'; // Ensure path is correct
-import { collection, query, onSnapshot, Timestamp, where } from 'firebase/firestore'; // Import where
-import { RouteProp } from '@react-navigation/native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Easing, Alert } from 'react-native';
+import { auth, db } from '../firebaseConfig';
+import { collection, query, onSnapshot, Timestamp, where } from 'firebase/firestore';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { Dimensions } from 'react-native';
 
 // --- Types ---
-type InventoryItemScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>; // Adjust screen name if needed
+type InventoryItemScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
 type Props = {
     navigation: InventoryItemScreenNavigationProp;
@@ -24,57 +26,47 @@ type InventoryItem = {
     description: string;
     currentStock: number;
     totalPrice: number;
-    expiryDate?: Timestamp | string | null; // Can be Firestore Timestamp, string, or null
-    priority: PriorityLevel; // Add priority field
-    uid: string; // Add uid field
+    expiryDate?: Timestamp | string | null;
+    priority: PriorityLevel;
+    uid: string;
     measurementUnit: string;
-    // unitprice?: number; // Include if you save/need unit price
+    category: string;
 };
 
 // --- Helper Functions ---
 
-// Converts Firestore Timestamp or string to Date object
 const getDateFromExpiry = (expiryDate?: Timestamp | string | null): Date | null => {
     if (!expiryDate) return null;
     if (expiryDate instanceof Timestamp) {
         return expiryDate.toDate();
     }
-    // Try parsing as string - adjust format if needed ('YYYY-MM-DD')
     const date = new Date(expiryDate);
     return isNaN(date.getTime()) ? null : date;
 };
 
-// Calculates days until expiry from a Date object
 const getDaysUntilExpiry = (expiryDateObj: Date | null): number | null => {
     if (!expiryDateObj) return null;
     const today = new Date();
-    // Set hours to 0 to compare dates only
     today.setHours(0, 0, 0, 0);
     expiryDateObj.setHours(0, 0, 0, 0);
-
     const diffTime = expiryDateObj.getTime() - today.getTime();
     const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return days; // Can be negative if expired
+    return days;
 };
 
-// Formats Date object to a readable string
 const formatDisplayDate = (dateObj: Date | null): string | null => {
     if (!dateObj) return null;
-    // Example format: Jan 15, 2025 - adjust as needed
     return dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-
-// Determines background color based on expiry days
 const getExpiryBackgroundColor = (expiryDays: number | null): string => {
-    if (expiryDays === null) return '#E0E0E0'; // Neutral grey if no date
-    if (expiryDays < 0) return '#FFCDD2'; // Light red - Expired
-    if (expiryDays <= 2) return '#FF8A80'; // Red - Expires very soon
-    if (expiryDays <= 7) return '#FFEB3B'; // Yellow - Expires soon
-    return '#C8E6C9'; // Green - Good
+    if (expiryDays === null) return '#E0E0E0';
+    if (expiryDays < 0) return '#FFCDD2';
+    if (expiryDays <= 2) return '#FF8A80';
+    if (expiryDays <= 7) return '#FFEB3B';
+    return '#C8E6C9';
 };
 
-// Determines style for priority badge
 const getPriorityBadgeStyle = (priority: PriorityLevel | undefined): object => {
     switch (priority) {
         case 'Essential':
@@ -84,18 +76,97 @@ const getPriorityBadgeStyle = (priority: PriorityLevel | undefined): object => {
         case 'Optional':
             return styles.priorityBadgeOptional;
         default:
-            return styles.priorityBadgeOptional; // Default style
+            return styles.priorityBadgeOptional;
     }
 };
 
+const generateInventoryReport = async (inventoryItems: InventoryItem[]) => {
+    const priorityExpenses = inventoryItems.reduce((acc, item) => {
+        const priority = item.priority || 'Optional';
+        acc[priority] = (acc[priority] || 0) + item.totalPrice;
+        return acc;
+    }, {});
+
+    const priorityList = Object.entries(priorityExpenses).map(([priority, totalPrice]) => ({ priority, totalPrice }));
+
+    const totalExpense = priorityList.reduce((acc, item) => acc + item.totalPrice, 0);
+
+    const pieChart = `
+        <div style="width:100%; height:300px;">
+            <svg width="100%" height="100%" viewBox="0 0 300 300">
+                ${priorityList.map((item, index, array) => {
+                    const total = array.reduce((acc, i) => acc + i.totalPrice, 0);
+                    const startAngle = array.slice(0, index).reduce((acc, i) => acc + i.totalPrice / total * 360, 0);
+                    const endAngle = startAngle + item.totalPrice / total * 360;
+                    const midAngle = (startAngle + endAngle) / 2;
+                    const x = 150 + 120 * Math.cos(midAngle * Math.PI / 180);
+                    const y = 150 + 120 * Math.sin(midAngle * Math.PI / 180);
+
+                    const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+                    const path = `M150,150 L${150 + 120 * Math.cos(startAngle * Math.PI / 180)},${150 + 120 * Math.sin(startAngle * Math.PI / 180)} A120,120 0 ${largeArcFlag},1 ${150 + 120 * Math.cos(endAngle * Math.PI / 180)},${150 + 120 * Math.sin(endAngle * Math.PI / 180)} Z`;
+                    const colors = ['#3182CE', '#E53E3E', '#DD6B20'];
+
+                    return `
+                        <path d="${path}" fill="${colors[index % colors.length]}"/>
+                        <text x="${x}" y="${y}" text-anchor="middle" alignment-baseline="middle" font-size="12" fill="white">${(item.totalPrice / total * 100).toFixed(1)}%</text>
+                    `;
+                }).join('')}
+            </svg>
+        </div>
+    `;
+
+    const htmlContent = `
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 30px; }
+                h2 { text-align: center; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            </style>
+        </head>
+        <body>
+            <h2>Inventory Expenses by Priority</h2>
+            ${pieChart}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Priority</th>
+                        <th>Total Expenses (Rs.)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${priorityList.map(item => `
+                        <tr>
+                            <td>${item.priority}</td>
+                            <td>${item.totalPrice.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <p><strong>Total Expenses: Rs. ${totalExpense.toFixed(2)}</strong></p>
+        </body>
+        </html>
+    `;
+
+    try {
+        const { uri } = await Print.printToFileAsync({ html: htmlContent });
+        await Sharing.shareAsync(uri, {
+            UTI: '.pdf',
+            mimeType: 'application/pdf'
+        });
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        Alert.alert('Error', 'An error occurred while generating the PDF report.');
+    }
+};
 
 // --- Component ---
 const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const spinValue = useState(new Animated.Value(0))[0]; // For loading animation
+    const spinValue = useState(new Animated.Value(0))[0];
 
-    // Loading animation effect
     useEffect(() => {
         Animated.loop(
             Animated.timing(spinValue, {
@@ -107,12 +178,11 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
         ).start();
     }, [spinValue]);
 
-    // Firestore listener effect
     useEffect(() => {
         if (auth.currentUser) {
             const userUid = auth.currentUser.uid;
-            const inventoryCollectionRef = collection(db, 'inventory'); // Reference the 'inventory' collection
-            const q = query(inventoryCollectionRef, where('uid', '==', userUid)); // Query for items with the current user's UID
+            const inventoryCollectionRef = collection(db, 'inventory');
+            const q = query(inventoryCollectionRef, where('uid', '==', userUid));
 
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const items: InventoryItem[] = snapshot.docs.map((doc) => {
@@ -121,37 +191,32 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                         id: doc.id,
                         ...data,
                         priority: data.priority || 'Important',
-                    } as InventoryItem; // Type assertion to InventoryItem
+                    } as InventoryItem;
                 });
                 setInventoryItems(items);
                 setLoading(false);
-            }, (error) => { // Handle snapshot errors
+            }, (error) => {
                 console.error("Error fetching inventory: ", error);
                 setLoading(false);
-                // Optionally show an error message to the user
             });
 
-            // Cleanup listener on component unmount
             return () => unsubscribe();
         } else {
             console.log("No user logged in.");
-            setInventoryItems([]); // Clear items if user logs out
+            setInventoryItems([]);
             setLoading(false);
         }
-    }, []); // Empty dependency array means this runs once on mount (and cleans up)
+    }, []);
 
     const spin = spinValue.interpolate({
         inputRange: [0, 1],
         outputRange: ['0deg', '360deg'],
     });
 
-    // --- Render Logic ---
-
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
                 <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                    {/* Use a custom icon or image if preferred */}
                     <Ionicons name="basket-outline" size={60} color="black" />
                 </Animated.View>
                 <Text style={styles.loadingText}>Fetching Inventory...</Text>
@@ -164,22 +229,20 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.emptyContainer}>
                 <Ionicons name="log-in-outline" size={50} color="gray" />
                 <Text style={styles.emptyText}>Please log in to view your inventory.</Text>
-                {/* Optional: Add a login button */}
                 <Footer navigation={navigation} />
             </View>
         );
     }
 
-
     if (inventoryItems.length === 0) {
         return (
             <View style={styles.container}>
-                {/* Keep Header consistent */}
-                <Text style={styles.title}>Inventory</Text>
-                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={24} color="black" />
-                </TouchableOpacity>
-
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                        <Ionicons name="arrow-back" size={24} color="black" />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Inventory</Text>
+                </View>
                 <View style={styles.emptyContainer}>
                     <Ionicons name="cube-outline" size={50} color="gray" />
                     <Text style={styles.emptyText}>Your inventory is empty.</Text>
@@ -190,15 +253,17 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
         );
     }
 
-    // Main content display
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Inventory</Text>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <Ionicons name="arrow-back" size={24} color="black" />
-            </TouchableOpacity>
-
-            {/* Use ScrollView as per original code, consider FlatList for long lists */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                    <Ionicons name="arrow-back" size={24} color="black" />
+                </TouchableOpacity>
+                <Text style={styles.title}>Inventory</Text>
+                <TouchableOpacity style={styles.reportButton} onPress={() => generateInventoryReport(inventoryItems)}>
+                    <Ionicons name="document-text-outline" size={24} color="black" />
+                </TouchableOpacity>
+            </View>
             <ScrollView contentContainerStyle={styles.scrollContentContainer}>
                 {inventoryItems.map((item) => {
                     const expiryDateObj = getDateFromExpiry(item.expiryDate);
@@ -208,35 +273,21 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                     const priorityBadgeStyle = getPriorityBadgeStyle(item.priority);
 
                     return (
-                        // Item Card
-                        <TouchableOpacity
-                        key={item.id}
-                        onPress={() => {
-                            navigation.navigate('ItemScreen', { item: item });
-                        }}
-                        activeOpacity={0.7}
-                    >
+                        <TouchableOpacity key={item.id} onPress={() => navigation.navigate('ItemScreen', { item: item })} activeOpacity={0.7}>
                             <View style={[styles.itemCard, { borderLeftColor: expiryBgColor }]}>
-                                {/* Priority Badge */}
                                 <View style={[styles.priorityBadge, priorityBadgeStyle]}>
                                     <Text style={styles.priorityBadgeText}>{item.priority}</Text>
                                 </View>
-
-                                {/* Item Details Section */}
                                 <View style={styles.itemContent}>
                                     <Text style={styles.itemName} numberOfLines={2}>{item.description}</Text>
-
                                     <View style={styles.itemDetailRow}>
                                         <Ionicons name="file-tray-stacked-outline" size={16} color="#555" />
                                         <Text style={styles.itemDetailText}>Quantity: {item.currentStock ?? 'N/A'} {item.measurementUnit}</Text>
                                     </View>
-
                                     <View style={styles.itemDetailRow}>
                                         <Ionicons name="cash-outline" size={16} color="#555" />
-                                        {/* Display Total Price, consider adding Unit Price if available */}
                                         <Text style={styles.itemDetailText}>Total Price: Rs. {item.totalPrice?.toFixed(2) ?? 'N/A'}</Text>
                                     </View>
-
                                     {displayExpiryDate ? (
                                         <View style={styles.itemDetailRow}>
                                             <Ionicons name="calendar-outline" size={16} color="#555" />
@@ -245,13 +296,10 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                                     ) : (
                                         <View style={styles.itemDetailRow}>
                                             <Ionicons name="calendar-outline" size={16} color="#888" />
-                                            {/* Optional: Add touchable to add date */}
                                             <Text style={[styles.itemDetailText, { color: '#888' }]}>No Expiry Date Set</Text>
                                         </View>
                                     )}
                                 </View>
-
-                                {/* Expiry Status Section */}
                                 <View style={styles.expiryStatus}>
                                     {expiryDays !== null ? (
                                         <>
@@ -263,11 +311,11 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                                             </Text>
                                         </>
                                     ) : (
-                                        // Placeholder or button to add expiry
                                         <Ionicons name="add-circle-outline" size={24} color="#AAA" />
                                     )}
                                 </View>
-                            </View></TouchableOpacity>
+                            </View>
+                        </TouchableOpacity>
                     );
                 })}
             </ScrollView>
@@ -280,7 +328,7 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA', // Light background for the whole screen
+        backgroundColor: '#F8F9FA',
     },
     loadingContainer: {
         flex: 1,
@@ -317,37 +365,31 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         textAlign: 'center',
-        marginTop: 50, // Adjust for status bar/notch
-        marginBottom: 15,
         color: '#333',
     },
     backButton: {
-        position: 'absolute',
-        top: 50, // Match title margin top
-        left: 16,
-        zIndex: 1, // Ensure it's above other elements
-        padding: 5, // Make touch target bigger
+        padding: 5,
     },
     scrollContentContainer: {
         paddingHorizontal: 16,
-        paddingBottom: 80, // Space for footer
+        paddingBottom: 80,
     },
     itemCard: {
         backgroundColor: 'white',
         borderRadius: 8,
         marginBottom: 12,
         flexDirection: 'row',
-        alignItems: 'stretch', // Make columns same height
+        alignItems: 'stretch',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.15,
         shadowRadius: 2,
         elevation: 2,
-        borderLeftWidth: 8, // Thick border for expiry color
-        position: 'relative', // Needed for absolute positioning of badge
+        borderLeftWidth: 8,
+        position: 'relative',
     },
     itemContent: {
-        flex: 1, // Take most space
+        flex: 1,
         paddingVertical: 12,
         paddingLeft: 15,
         paddingRight: 10,
@@ -356,17 +398,17 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#212529',
-        marginBottom: 8, // More space below name
+        marginBottom: 8,
     },
     itemDetailRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 5, // Space between detail rows
+        marginBottom: 5,
     },
     itemDetailText: {
         fontSize: 13,
         color: '#495057',
-        marginLeft: 8, // Space after icon
+        marginLeft: 8,
     },
     priorityBadge: {
         position: 'absolute',
@@ -374,7 +416,7 @@ const styles = StyleSheet.create({
         right: 8,
         paddingHorizontal: 8,
         paddingVertical: 3,
-        borderRadius: 12, // Pill shape
+        borderRadius: 12,
         zIndex: 2,
     },
     priorityBadgeText: {
@@ -382,42 +424,52 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: 'bold',
     },
-    // Specific Badge Styles
     priorityBadgeEssential: {
-        backgroundColor: '#DC3545', // Red
+        backgroundColor: '#DC3545',
     },
     priorityBadgeImportant: {
-        backgroundColor: '#FFC107', // Yellow/Orange
-        color: '#333', // Darker text for yellow
+        backgroundColor: '#FFC107',
+        color: '#333',
     },
     priorityBadgeOptional: {
-        backgroundColor: '#6C757D', // Gray
+        backgroundColor: '#6C757D',
     },
     expiryStatus: {
-        width: 75, // Fixed width for the right section
+        width: 75,
         justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 10,
         borderLeftWidth: 1,
-        borderLeftColor: '#EEE', // Subtle separator line
+        borderLeftColor: '#EEE',
         paddingHorizontal: 5,
     },
     expiryDaysNumber: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#28A745', // Default green
+        color: '#28A745',
     },
     expiryDaysSoon: {
-        color: '#FFC107', // Yellow/Orange for soon
+        color: '#FFC107',
     },
     expiryDaysExpired: {
-        color: '#DC3545', // Red for expired/past
+        color: '#DC3545',
     },
     expiryDaysText: {
         fontSize: 10,
-        color: '#6C757D', // Gray text
+        color: '#6C757D',
         marginTop: 2,
         textAlign: 'center'
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingTop: 50,
+        paddingBottom: 15,
+    },
+    reportButton: {
+        padding: 5,
     },
 });
 
