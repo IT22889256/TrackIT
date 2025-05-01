@@ -234,9 +234,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                             )}
                         </View>
 
-                        <TouchableOpacity style={styles.forgotPasswordContainer}>
+                        {/* <TouchableOpacity style={styles.forgotPasswordContainer}>
                             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
 
                         <Animated.View style={[styles.buttonContainer, animatedButtonStyle]}>
                             <TouchableOpacity

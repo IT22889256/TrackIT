@@ -1,114 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
     TextInput,
     TouchableOpacity,
     StyleSheet,
+    ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { NavigationProp } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
+import { RootStackParamList } from '@/navigation/AppNavigator';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { app, auth } from '../firebaseConfig'; // Import auth from firebaseConfig
 
+type LabelManualEditRouteProp = StackScreenProps<RootStackParamList, 'LabelManualEdit'>['route'];
+type LabelManualEditNavigationProp = StackNavigationProp<RootStackParamList, 'LabelManualEdit'>;
+
 interface Props {
-    navigation: NavigationProp<any>;
+    navigation: LabelManualEditNavigationProp;
+    route: LabelManualEditRouteProp;
 }
 
-const LabelManualEdit: React.FC<Props> = ({ navigation }) => {
+const LabelManualEdit: React.FC<Props> = ({ navigation, route }) => {
+    const { apiResponseData } = route.params as { apiResponseData: any }; // Use 'any' for now, or a more specific type if you know it
+    console.log("apiResponseData", apiResponseData);
+
     const [productName, setProductName] = useState('');
     const [expiryDate, setExpiryDate] = useState('');
-    const [productError, setProductError] = useState('');
-    const [dateError, setDateError] = useState('');
+    const [rawOcrText, setRawOcrText] = useState(''); // State for the entire raw OCR text
+    const [extractedOcrText, setExtractedOcrText] = useState(''); // New state for the 'ocr_text'
     const db = getFirestore(app);
 
-    const validateDate = (date: string) => {
-        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-        if (!datePattern.test(date)) {
-            return false;
+    useEffect(() => {
+        if (apiResponseData) {
+            // Extract the 'ocr_text' if it exists within the 'data' object
+            if (apiResponseData.data && apiResponseData.data.ocr_text) {
+                setExtractedOcrText(String(apiResponseData.data.ocr_text));
+                // Optionally, you can still set the entire data to rawOcrText for debugging or other purposes
+                setRawOcrText(JSON.stringify(apiResponseData.data, null, 2));
+            } else if (typeof apiResponseData === 'string') {
+                setRawOcrText(apiResponseData);
+            } else {
+                setRawOcrText(JSON.stringify(apiResponseData, null, 2));
+                console.warn("Received apiResponseData is an object without a 'data.ocr_text' property. Displaying the entire object.");
+            }
         }
-
-        const parts = date.split('-');
-        const year = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10);
-        const day = parseInt(parts[2], 10);
-
-        if (month < 1 || month > 12) {
-            return false;
-        }
-
-        if (day < 1 || day > 31) {
-            return false;
-        }
-
-        if (month === 2 && day > 29) {
-            return false;
-        }
-        if ([4, 6, 9, 11].includes(month) && day > 30) {
-            return false;
-        }
-
-        return true;
-    };
-
-    const validateForm = () => {
-        let isValid = true;
-
-        if (!productName.trim()) {
-            setProductError('Product name is required.');
-            isValid = false;
-        } else {
-            setProductError('');
-        }
-
-        if (!expiryDate.trim()) {
-            setDateError('Expiry date is required.');
-            isValid = false;
-        } else if (!validateDate(expiryDate)) {
-            setDateError('Invalid date format. Use YYYY-MM-DD.');
-            isValid = false;
-        } else {
-            setDateError('');
-        }
-
-        return isValid;
-    };
-
-    const handleDateChange = (text: string) => {
-        const formattedText = text.replace(/[^0-9\-]/g, '');
-        setExpiryDate(formattedText);
-
-        if (formattedText.trim() && !validateDate(formattedText)) {
-            setDateError('Invalid date format. Use YYYY-MM-DD.');
-        } else {
-            setDateError('');
-        }
-    };
+    }, [apiResponseData]);
 
     const handleAddItem = async () => {
-        if (!validateForm()) return;
-
         try {
             const user = auth.currentUser;
             if (user) {
-                await addDoc(collection(db, 'expireItems'), { // Changed collection name to 'expireItems'
+                await addDoc(collection(db, 'expireItems'), {
                     productName: productName,
                     expiryDate: expiryDate,
-                    uid: user.uid, // Add user's UID to the document
+                    uid: user.uid,
                 });
 
                 navigation.navigate('Reminder', { productName, expiryDate });
             } else {
                 console.error('User is not logged in.');
-                // Handle the case where the user is not logged in (e.g., show an error message)
+                // Handle the case where the user is not logged in
             }
         } catch (error) {
             console.error('Error adding document: ', error);
-            // Handle error (e.g., show an error message to the user)
+            // Handle error
         }
     };
 
-    const isFormValid = productName.trim() && expiryDate.trim() && !dateError;
+    const isFormValid = true; // Always true since validations are removed
 
     return (
         <View style={styles.container}>
@@ -116,11 +77,11 @@ const LabelManualEdit: React.FC<Props> = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <Ionicons name="arrow-back" size={24} color="black" />
                 </TouchableOpacity>
-                <Text style={styles.title}>Expiry Items</Text>
+                <Text style={styles.title}>Edit Item Details</Text>
                 <View style={{ width: 24 }} />
             </View>
 
-            <Text style={styles.subtitle}>You can adjust the details manually</Text>
+            <Text style={styles.subtitle}>Adjust the details if needed</Text>
 
             <View style={styles.inputContainer}>
                 <View style={styles.inputWrapper}>
@@ -129,13 +90,9 @@ const LabelManualEdit: React.FC<Props> = ({ navigation }) => {
                         style={styles.input}
                         placeholder="Product Name"
                         value={productName}
-                        onChangeText={(text) => {
-                            setProductName(text);
-                            setProductError(text.trim() ? '' : 'Product name is required.');
-                        }}
+                        onChangeText={setProductName}
                     />
                 </View>
-                {productError ? <Text style={styles.errorText}>{productError}</Text> : null}
 
                 <View style={styles.inputWrapper}>
                     <Ionicons name="calendar-outline" size={24} color="black" style={styles.icon} />
@@ -143,23 +100,38 @@ const LabelManualEdit: React.FC<Props> = ({ navigation }) => {
                         style={styles.input}
                         placeholder="Expiry Date (YYYY-MM-DD)"
                         value={expiryDate}
-                        onChangeText={handleDateChange}
+                        onChangeText={setExpiryDate}
                     />
                 </View>
-                {dateError ? <Text style={styles.errorText}>{dateError}</Text> : null}
+
+                {/* New field to display the extracted OCR text */}
+                {extractedOcrText && (
+                    <View style={styles.scannedTextContainer}>
+                        <Text style={styles.scannedTextLabel}>Extracted OCR Text:</Text>
+                        <ScrollView style={styles.scannedTextView}>
+                            <Text style={styles.scannedText}>{extractedOcrText}</Text>
+                        </ScrollView>
+                    </View>
+                )}
+
+                {/* Existing field to display the raw API response */}
+                <View style={styles.scannedTextContainer}>
+                    <Text style={styles.scannedTextLabel}>Raw API Response:</Text>
+                    <ScrollView style={styles.scannedTextView}>
+                        <Text style={styles.scannedText}>{rawOcrText}</Text>
+                    </ScrollView>
+                </View>
             </View>
 
             <TouchableOpacity
-                style={[styles.addButton, !isFormValid && styles.disabledButton]}
+                style={styles.addButton}
                 onPress={handleAddItem}
-                disabled={!isFormValid}
             >
-                <Text style={styles.addButtonText}>Add</Text>
+                <Text style={styles.addButtonText}>Add Item</Text>
             </TouchableOpacity>
         </View>
     );
 };
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: 'white', padding: 20 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
@@ -169,10 +141,12 @@ const styles = StyleSheet.create({
     inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E0E0E0', borderRadius: 20, paddingHorizontal: 10, marginBottom: 10, paddingVertical: 12 },
     icon: { marginRight: 10 },
     input: { flex: 1, fontSize: 16 },
-    errorText: { color: 'red', fontSize: 12, marginLeft: 10, marginBottom: 5 },
     addButton: { backgroundColor: 'black', padding: 15, borderRadius: 25, alignItems: 'center' },
-    disabledButton: { backgroundColor: 'gray' },
     addButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+    scannedTextContainer: { marginBottom: 20 },
+    scannedTextLabel: { fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
+    scannedTextView: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, minHeight: 100 },
+    scannedText: { fontSize: 14 },
 });
 
 export default LabelManualEdit;

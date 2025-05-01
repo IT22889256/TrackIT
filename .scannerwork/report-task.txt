@@ -2,5 +2,5 @@ projectKey=ITPM_SonarqubeSampleProject
 serverUrl=http://localhost:9000
 serverVersion=25.4.0.105899
 dashboardUrl=http://localhost:9000/dashboard?id=ITPM_SonarqubeSampleProject
-ceTaskId=9b777fc5-9972-4095-9d60-4aebf67072a3
-ceTaskUrl=http://localhost:9000/api/ce/task?id=9b777fc5-9972-4095-9d60-4aebf67072a3
+ceTaskId=6530fe8e-865b-489f-af5a-096fe03fd58e
+ceTaskUrl=http://localhost:9000/api/ce/task?id=6530fe8e-865b-489f-af5a-096fe03fd58e
