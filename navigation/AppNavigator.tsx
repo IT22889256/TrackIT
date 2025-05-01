@@ -63,6 +63,10 @@ export type RootStackParamList = {
   InventoryScreen:undefined;
   ItemScreen: { item: InventoryItem };
   AddMember:undefined;
+  LabelManualEdit: {
+    apiResponseData?: any;
+    productName?: string;
+};
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
