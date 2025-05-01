@@ -6,13 +6,16 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
+    Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/AppNavigator';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
-import { app, auth } from '../firebaseConfig'; // Import auth from firebaseConfig
+import { app, auth } from '../firebaseConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 type LabelManualEditRouteProp = StackScreenProps<RootStackParamList, 'LabelManualEdit'>['route'];
 type LabelManualEditNavigationProp = StackNavigationProp<RootStackParamList, 'LabelManualEdit'>;
@@ -22,54 +25,126 @@ interface Props {
     route: LabelManualEditRouteProp;
 }
 
+const TEMP_PRODUCT_KEY = 'TEMP_PRODUCT_NAME';
+
+const extractExpiryDate = (ocrText: string): string | null => {
+    const lines = ocrText.split('\n');
+    for (const line of lines) {
+        const expMatch = line.match(/EXP[.\s:]*(\d{2})[\.\/-](\d{2})[\.\/-](\d{4})/i);
+        if (expMatch) {
+            const [, day, month, year] = expMatch;
+            return `${year}-${month}-${day}`;
+        }
+    }
+    return null;
+};
+
 const LabelManualEdit: React.FC<Props> = ({ navigation, route }) => {
-    const { apiResponseData } = route.params as { apiResponseData: any }; // Use 'any' for now, or a more specific type if you know it
-    console.log("apiResponseData", apiResponseData);
-
-    const [productName, setProductName] = useState('');
+    const { apiResponseData, productName: initialProductName } = route.params || {};
+    const [productName, setProductName] = useState(initialProductName || '');
     const [expiryDate, setExpiryDate] = useState('');
-    const [rawOcrText, setRawOcrText] = useState(''); // State for the entire raw OCR text
-    const [extractedOcrText, setExtractedOcrText] = useState(''); // New state for the 'ocr_text'
+    const [rawOcrText, setRawOcrText] = useState('');
+    const [extractedOcrText, setExtractedOcrText] = useState('');
     const db = getFirestore(app);
+    
+    // Load saved product name when component mounts
+    useEffect(() => {
+        const loadSavedProductName = async () => {
+            try {
+                const savedProductName = await AsyncStorage.getItem(TEMP_PRODUCT_KEY);
+                if (savedProductName && !initialProductName) {
+                    setProductName(savedProductName);
+                } else if (initialProductName) {
+                    // If a new product name is passed, update both state and storage
+                    setProductName(initialProductName);
+                    await AsyncStorage.setItem(TEMP_PRODUCT_KEY, initialProductName);
+                }
+            } catch (error) {
+                console.error('Error loading saved product name:', error);
+            }
+        };
+        
+        loadSavedProductName();
+    }, [initialProductName]);
+    
+    // Save product name to AsyncStorage whenever it changes
+    useEffect(() => {
+        const saveProductName = async () => {
+            try {
+                if (productName) {
+                    await AsyncStorage.setItem(TEMP_PRODUCT_KEY, productName);
+                }
+            } catch (error) {
+                console.error('Error saving product name:', error);
+            }
+        };
+        
+        saveProductName();
+    }, [productName]);
 
+    // Process OCR data when available
     useEffect(() => {
         if (apiResponseData) {
-            // Extract the 'ocr_text' if it exists within the 'data' object
-            if (apiResponseData.data && apiResponseData.data.ocr_text) {
-                setExtractedOcrText(String(apiResponseData.data.ocr_text));
-                // Optionally, you can still set the entire data to rawOcrText for debugging or other purposes
+            let ocrText = '';
+            if (apiResponseData.data?.ocr_text) {
+                ocrText = String(apiResponseData.data.ocr_text);
+                setExtractedOcrText(ocrText);
                 setRawOcrText(JSON.stringify(apiResponseData.data, null, 2));
-            } else if (typeof apiResponseData === 'string') {
-                setRawOcrText(apiResponseData);
+                
+                const extractedDate = extractExpiryDate(ocrText);
+                if (extractedDate) {
+                    setExpiryDate(extractedDate);
+                }
             } else {
-                setRawOcrText(JSON.stringify(apiResponseData, null, 2));
-                console.warn("Received apiResponseData is an object without a 'data.ocr_text' property. Displaying the entire object.");
+                const fallbackText = typeof apiResponseData === 'string' 
+                    ? apiResponseData 
+                    : JSON.stringify(apiResponseData, null, 2);
+                setRawOcrText(fallbackText);
+                setExtractedOcrText(fallbackText);
             }
         }
     }, [apiResponseData]);
 
+    // Update product name in storage when manually changed
+    const handleProductNameChange = (text: string) => {
+        setProductName(text);
+    };
+
     const handleAddItem = async () => {
         try {
+            // Validate input
+            if (!productName.trim()) {
+                Alert.alert('Missing Information', 'Please enter a product name');
+                return;
+            }
+            
+            if (!expiryDate.trim()) {
+                Alert.alert('Missing Information', 'Please enter an expiry date');
+                return;
+            }
+            
             const user = auth.currentUser;
             if (user) {
                 await addDoc(collection(db, 'expireItems'), {
-                    productName: productName,
-                    expiryDate: expiryDate,
+                    productName,
+                    expiryDate,
                     uid: user.uid,
+                    ownerId: user.uid,
+                    createdAt: new Date(),
                 });
-
+                
+                // Clear temporary storage after successful addition
+                await AsyncStorage.removeItem(TEMP_PRODUCT_KEY);
+                
                 navigation.navigate('Reminder', { productName, expiryDate });
             } else {
-                console.error('User is not logged in.');
-                // Handle the case where the user is not logged in
+                Alert.alert('Error', 'You must be logged in to add items');
             }
         } catch (error) {
             console.error('Error adding document: ', error);
-            // Handle error
+            Alert.alert('Error', 'Failed to add the item. Please try again.');
         }
     };
-
-    const isFormValid = true; // Always true since validations are removed
 
     return (
         <View style={styles.container}>
@@ -90,7 +165,7 @@ const LabelManualEdit: React.FC<Props> = ({ navigation, route }) => {
                         style={styles.input}
                         placeholder="Product Name"
                         value={productName}
-                        onChangeText={setProductName}
+                        onChangeText={handleProductNameChange}
                     />
                 </View>
 
@@ -104,23 +179,23 @@ const LabelManualEdit: React.FC<Props> = ({ navigation, route }) => {
                     />
                 </View>
 
-                {/* New field to display the extracted OCR text */}
-                {extractedOcrText && (
+                {/* {extractedOcrText && (
                     <View style={styles.scannedTextContainer}>
                         <Text style={styles.scannedTextLabel}>Extracted OCR Text:</Text>
                         <ScrollView style={styles.scannedTextView}>
                             <Text style={styles.scannedText}>{extractedOcrText}</Text>
                         </ScrollView>
                     </View>
-                )}
+                )}uid
 
-                {/* Existing field to display the raw API response */}
+        
+
                 <View style={styles.scannedTextContainer}>
                     <Text style={styles.scannedTextLabel}>Raw API Response:</Text>
                     <ScrollView style={styles.scannedTextView}>
                         <Text style={styles.scannedText}>{rawOcrText}</Text>
                     </ScrollView>
-                </View>
+                </View> */}
             </View>
 
             <TouchableOpacity
@@ -129,9 +204,18 @@ const LabelManualEdit: React.FC<Props> = ({ navigation, route }) => {
             >
                 <Text style={styles.addButtonText}>Add Item</Text>
             </TouchableOpacity>
+
+            {/* New Scan Button */}
+            <TouchableOpacity
+                style={styles.scanButton}
+                onPress={() => navigation.navigate('LabelScan')}
+            >
+                <Text style={styles.scanButtonText}>Scan New Label</Text>
+            </TouchableOpacity>
         </View>
     );
 };
+
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: 'white', padding: 20 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
@@ -143,6 +227,8 @@ const styles = StyleSheet.create({
     input: { flex: 1, fontSize: 16 },
     addButton: { backgroundColor: 'black', padding: 15, borderRadius: 25, alignItems: 'center' },
     addButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+    scanButton: { backgroundColor: '#007AFF', padding: 15, borderRadius: 25, alignItems: 'center', marginTop: 10 },
+    scanButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
     scannedTextContainer: { marginBottom: 20 },
     scannedTextLabel: { fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
     scannedTextView: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, minHeight: 100 },
