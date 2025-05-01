@@ -76,7 +76,7 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
       setIsCurrentPasswordCorrect(null);
       return false;
     }
-
+  
     try {
       const user = auth.currentUser;
       if (user && user.email) {
@@ -86,12 +86,13 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
         setIsCurrentPasswordCorrect(true);
         return true;
       }
+      return false;
     } catch (error: any) {
+      console.error('Reauthentication error:', error);
       setCurrentPasswordError('Incorrect current password');
       setIsCurrentPasswordCorrect(false);
       return false;
     }
-    return false;
   };
 
   const validateNewPassword = (password: string) => {
@@ -131,27 +132,28 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   useEffect(() => {
-    const debounce = (func: (...args: any[]) => void, delay: number) => {
-      let timeoutId: NodeJS.Timeout;
-      return (...args: any[]) => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
-        timeoutId = setTimeout(() => {
-          func(...args);
-        }, delay);
-      };
-    };
-
-    const debouncedValidateCurrentPassword = debounce(validateCurrentPassword, 500);
-
+  let isMounted = true;
+  const timer = setTimeout(async () => {
     if (currentPassword) {
-      debouncedValidateCurrentPassword(currentPassword);
-    } else {
+      try {
+        await validateCurrentPassword(currentPassword);
+      } catch (error) {
+        if (isMounted) {
+          setCurrentPasswordError('Error validating password');
+          setIsCurrentPasswordCorrect(false);
+        }
+      }
+    } else if (isMounted) {
       setCurrentPasswordError('');
       setIsCurrentPasswordCorrect(null);
     }
-  }, [currentPassword]);
+  }, 500);
+
+  return () => {
+    isMounted = false;
+    clearTimeout(timer);
+  };
+}, [currentPassword]);
 
   useEffect(() => {
     validateNewPassword(newPassword);
@@ -167,14 +169,15 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   const handleChangePassword = async () => {
+    // Force validate all fields
     const isCurrentPasswordValid = await validateCurrentPassword(currentPassword);
     const isNewPasswordValid = validateNewPassword(newPassword);
     const isConfirmNewPasswordValid = validateConfirmNewPassword(confirmNewPassword, newPassword);
-
+  
     if (!isCurrentPasswordValid || !isNewPasswordValid || !isConfirmNewPasswordValid) {
       return;
     }
-
+  
     setLoading(true);
     try {
       const user = auth.currentUser;

@@ -1,243 +1,198 @@
 # greedy_logic.py
 import math
 from datetime import datetime, timedelta
-# Use typing for clarity if needed, e.g., from firebase_admin import firestore for Timestamp type hint
-# But logic doesn't strictly require the import if only checking type via isinstance or duck-typing
+# from firebase_admin import firestore # Only needed for Timestamp type hint if used
 
-# --- Thresholds and Parameters (as defined by user) ---
+# --- Thresholds and Parameters (Same as before) ---
 EXPIRY_SOON_DAYS = 7
-LOW_STOCK_THRESHOLDS = {
-    'kg': 1,
-    'g': 100,
-    'unit': 2,
-    'pcs': 2, # Treat pcs as unit
-    'l': 1,   # Treat l as kg equivalent
-    'ml': 100,# Treat ml as g equivalent
-    'default': 1 # Fallback threshold if unit is unknown/missing
-}
-DEFAULT_PURCHASE_QUANTITIES = {
-    'kg': 1,
-    'g': 100,
-    'unit': 1,
-    'pcs': 1,
-    'l': 1,
-    'ml': 100,
-    'default': 1 # Fallback purchase quantity
-}
-# Priority Scoring (using case-sensitive keys matching potential Firestore values)
+LOW_STOCK_THRESHOLDS = { 'kg': 1, 'g': 100, 'unit': 2, 'pcs': 2, 'l': 1, 'ml': 100, 'default': 1 }
+DEFAULT_PURCHASE_QUANTITIES = { 'kg': 1, 'g': 100, 'unit': 1, 'pcs': 1, 'l': 1, 'ml': 100, 'default': 1 }
 PRIORITY_SCORES = {'Essential': 100, 'Important': 50, 'Optional': 10}
 LOW_STOCK_BONUS = 30
 EXPIRY_SOON_BONUS = 50
 
-# --- Helper Function to Determine Unit ---
+# --- Helper Functions (get_item_unit, get_low_stock_threshold_for_item, get_default_purchase_unit_quantity, parse_date) ---
+# (Keep these exactly as in the previous version)
 def get_item_unit(item):
-    """Determines the measurement unit, prioritizing the 'measurementUnit' field."""
-    unit = item.get('measurementUnit', '').lower() # Get unit, default to empty string, lowercase
+    unit = item.get('measurementUnit', '').lower()
     if unit in ['kg', 'g', 'unit', 'pcs', 'l', 'ml']:
-        # Normalize units if needed (e.g., pcs -> unit)
         unit_map = {'pcs': 'unit'}
         return unit_map.get(unit, unit)
-
-    # Fallback: Infer from description (less reliable) - Keep simple for now
     desc_lower = item.get('description', '').lower()
     if 'kg' in desc_lower: return 'kg'
-    if ' g' in desc_lower and 'kg' not in desc_lower: return 'g' # Space before 'g' to avoid 'kg'
-    if ' l' in desc_lower and 'ml' not in desc_lower: return 'l' # Space before 'l'
+    if ' g' in desc_lower and 'kg' not in desc_lower: return 'g'
+    if ' l' in desc_lower and 'ml' not in desc_lower: return 'l'
     if 'ml' in desc_lower: return 'ml'
+    return 'unit'
 
-    # print(f"Warning: Could not determine unit for '{item.get('description')}', using 'unit'.")
-    return 'unit' # Default to 'unit' if not found
-
-# --- Helper Function: Get Threshold ---
 def get_low_stock_threshold_for_item(item):
-    """Gets the low stock threshold based on the item's unit."""
     unit = get_item_unit(item)
     return LOW_STOCK_THRESHOLDS.get(unit, LOW_STOCK_THRESHOLDS['default'])
 
-# --- Helper Function: Get Purchase Quantity ---
-def get_purchase_quantity_for_item(item):
-    """Gets the default purchase quantity based on the item's unit."""
+def get_default_purchase_unit_quantity(item):
     unit = get_item_unit(item)
-    # Future enhancement: Add logic for target stock levels here if needed
     return DEFAULT_PURCHASE_QUANTITIES.get(unit, DEFAULT_PURCHASE_QUANTITIES['default'])
 
-# --- Helper Function: Parse Date ---
 def parse_date(date_input):
-    """
-    Parses various date inputs (datetime, Firestore Timestamp dict, common strings)
-    into a timezone-naive Python date object. Returns None if parsing fails.
-    """
     if not date_input: return None
-    # Handles datetime objects (e.g., from Admin SDK context if used elsewhere)
-    if isinstance(date_input, datetime):
-        return date_input.date()
-    # Handles Firestore Timestamp passed as dict from client SDK
+    if isinstance(date_input, datetime): return date_input.date()
     if isinstance(date_input, dict) and 'seconds' in date_input and 'nanoseconds' in date_input:
         try:
             ts = date_input['seconds'] + date_input['nanoseconds'] / 1e9
             return datetime.fromtimestamp(ts).date()
-        except Exception as e:
-            print(f"Error converting dict timestamp: {e}")
-            return None
-    # Handles common string formats
+        except Exception as e: print(f"Timestamp dict error: {e}"); return None
     if isinstance(date_input, str):
-        for fmt in ('%Y-%m-%dT%H:%M:%S.%fZ', # ISO format from JS toISOString()
-                    '%Y-%m-%dT%H:%M:%SZ',
-                    '%Y-%m-%d', # Date only YYYY-MM-DD
-                    '%m/%d/%Y', # Common US format MM/DD/YYYY
-                    '%Y/%m/%d'): # YYYY/MM/DD
+        for fmt in ('%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%d', '%m/%d/%Y', '%Y/%m/%d'):
             try: return datetime.strptime(date_input, fmt).date()
             except ValueError: continue
-    # Optionally handle direct date objects if they can occur
-    # if isinstance(date_input, date): return date_input # Python's date object
-
-    print(f"Warning: Could not parse date input: {date_input} (Type: {type(date_input)})")
+    print(f"Date parse warn: {date_input} (Type: {type(date_input)})")
     return None
 
 
 # --- Main Greedy Algorithm Logic ---
 def generate_budget_shopping_list_logic(inventory_items, user_budget):
     """
-    Generates a budget-friendly shopping list using a greedy approach.
-
-    Args:
-        inventory_items: A list of dictionaries, where each dictionary
-                         represents an inventory item with fields like
-                         'id', 'description', 'priority', 'currentStock',
-                         'unitprice', 'expiryDate', 'measurementUnit'. Assumes
-                         these items represent the current aggregated state.
-        user_budget: The maximum budget allowed for the shopping list.
-
-    Returns:
-        A list of dictionaries representing the items to include in the shopping list.
+    Generates a budget shopping list using a two-pass greedy approach:
+    1. Initial allocation based on default purchase units and value/cost.
+    2. Second pass iterates through selected items to increase quantities using remaining budget.
     """
     candidate_items = []
     current_date_obj = datetime.now().date()
-    print(f"Running greedy logic for budget: {user_budget} with {len(inventory_items)} inventory items.")
+    print(f"Running 2-pass greedy logic. Budget: {user_budget}, Items: {len(inventory_items)}.")
 
+    # --- Step 1 & 2: Filter and Score Candidate Items ---
+    # (This part remains the same - determines which items are *eligible*)
     for item in inventory_items:
-        is_low_stock, is_expiring_soon = False, False
-        days_until_expiry = None
-
-        # --- Extract and Validate essential fields ---
+        # (Validation logic for priority, current_stock, unit_price etc.)
         priority = item.get('priority')
         current_stock = item.get('currentStock')
         unit_price = item.get('unitprice')
         description = item.get('description')
-        item_id = item.get('id', description) # Use ID from Firestore or fallback
-
-        try: # Safely convert numeric types
+        item_id = item.get('id', description)
+        try:
             current_stock = float(current_stock) if current_stock is not None else None
             unit_price = float(unit_price) if unit_price is not None else None
-        except (ValueError, TypeError) as e:
-            print(f"Warning: Invalid numeric stock/price in item '{description}' (ID: {item_id}): {e}. Skipping.")
+        except (ValueError, TypeError) as e: print(f"Warn: Invalid num: '{description}' ({item_id}): {e}. Skip."); continue
+        if priority not in PRIORITY_SCORES or current_stock is None or unit_price is None or not description or unit_price <= 0:
+            print(f"Warn: Missing/invalid field: '{description}' ({item_id}). Skip.")
             continue
 
-        # Check essential fields before proceeding
-        if priority not in PRIORITY_SCORES:
-             print(f"Warning: Invalid or missing priority '{priority}' for item '{description}' (ID: {item_id}). Skipping.")
-             continue
-        if current_stock is None:
-             print(f"Warning: Missing currentStock for item '{description}' (ID: {item_id}). Skipping.")
-             continue
-        if unit_price is None:
-             print(f"Warning: Missing unitprice for item '{description}' (ID: {item_id}). Skipping.")
-             continue
-        if not description:
-             print(f"Warning: Missing description for item (ID: {item_id}). Skipping.")
-             continue
-        if unit_price <= 0:
-             print(f"Warning: Skipping item '{description}' (ID: {item_id}) due to zero or negative unit price.")
-             continue
-
-        # --- A. Check Low Stock ---
+        is_low_stock, is_expiring_soon = False, False
         threshold = get_low_stock_threshold_for_item(item)
-        if current_stock < threshold:
-            is_low_stock = True
+        if current_stock < threshold: is_low_stock = True
 
-        # --- B. Check Expiry ---
         expiry_date_obj = parse_date(item.get('expiryDate'))
         if expiry_date_obj:
             days_until_expiry = (expiry_date_obj - current_date_obj).days
-            # Consider items expiring today or within the threshold as "soon"
-            if 0 <= days_until_expiry <= EXPIRY_SOON_DAYS:
-                is_expiring_soon = True
-            # Optional: Log if item is already expired
-            # elif days_until_expiry < 0:
-            #     print(f"Info: Item '{description}' (ID: {item_id}) expired {abs(days_until_expiry)} days ago.")
+            if 0 <= days_until_expiry <= EXPIRY_SOON_DAYS: is_expiring_soon = True
 
-        # --- C. Determine if Item is a Candidate ---
         is_candidate = False
-        # Use case-sensitive priority check matching the PRIORITY_SCORES keys
-        if priority == 'Essential' and (is_low_stock or is_expiring_soon):
-            is_candidate = True
-        elif priority == 'Important' and (is_low_stock or is_expiring_soon):
-            is_candidate = True
-        # Example: Include Optional only if low stock
-        # elif priority == 'Optional' and is_low_stock:
-        #    is_candidate = True
+        if priority == 'Essential' and (is_low_stock or is_expiring_soon): is_candidate = True
+        elif priority == 'Important' and (is_low_stock or is_expiring_soon): is_candidate = True
 
-        # --- D. If Candidate, Calculate Score and Add ---
         if is_candidate:
-            base_score = PRIORITY_SCORES.get(priority, 0) # Get score for the priority
-            urgency_bonus = (LOW_STOCK_BONUS if is_low_stock else 0) + \
-                            (EXPIRY_SOON_BONUS if is_expiring_soon else 0)
+            base_score = PRIORITY_SCORES.get(priority, 0)
+            urgency_bonus = (LOW_STOCK_BONUS if is_low_stock else 0) + (EXPIRY_SOON_BONUS if is_expiring_soon else 0)
             final_score = base_score + urgency_bonus
+            default_unit_quantity = get_default_purchase_unit_quantity(item)
+            cost_per_default_unit = default_unit_quantity * unit_price
+            item_unit = get_item_unit(item)
+            value_per_cost = final_score / cost_per_default_unit if cost_per_default_unit > 0 else 0
+            reason = (("Low Stock " + ("(Expiring)" if is_expiring_soon else "")) if is_low_stock else ("Near Expiry" if is_expiring_soon else "Priority Need"))
 
-            purchase_quantity_num = get_purchase_quantity_for_item(item)
-            purchase_cost = purchase_quantity_num * unit_price
-            item_unit = get_item_unit(item) # Get unit for display/storage
-
-            # Value metric: Score per unit of currency (e.g., Score per Rupee)
-            value_per_cost = final_score / purchase_cost if purchase_cost > 0 else 0
-
-            reason_parts = []
-            if is_low_stock: reason_parts.append("Low Stock")
-            if is_expiring_soon: reason_parts.append("Near Expiry")
-            reason = ", ".join(reason_parts) if reason_parts else "Priority Need"
-
-
-            # Add to candidates list if valid
-            if purchase_cost > 0 and final_score > 0:
+            if cost_per_default_unit > 0 and final_score > 0:
                  candidate_items.append({
-                     'id': item_id,
-                     'description': description,
-                     'priorityScore': final_score,
-                     'unitprice': unit_price,
-                     'valuePerCost': value_per_cost, # Key for sorting
-                     'purchaseQuantity': purchase_quantity_num, # The numeric quantity to buy
-                     'purchaseCost': purchase_cost,
-                     'reason': reason,
-                     'unit': item_unit # Store unit for display formatting later
+                     'id': item_id, 'description': description, 'priorityScore': final_score,
+                     'unitprice': unit_price, 'valuePerCost': value_per_cost,
+                     'defaultPurchaseQuantity': default_unit_quantity,
+                     'costPerDefaultUnit': cost_per_default_unit,
+                     'reason': reason, 'unit': item_unit
                  })
-            # else: # Optional logging for excluded items
-                 # print(f"Info: Item '{description}' (ID: {item_id}) calculated zero cost or score, excluding.")
 
     # --- Step 3: Sort Candidates ---
-    # Sort by valuePerCost (descending) - most value for money first
     sorted_candidates = sorted(candidate_items, key=lambda x: x['valuePerCost'], reverse=True)
-    print(f"Found {len(sorted_candidates)} candidate items for the list after filtering and scoring.")
+    print(f"Found {len(sorted_candidates)} candidate items after filtering.")
 
-    # --- Step 4: Greedy Allocation ---
-    shopping_list = []
-    remaining_budget = float(user_budget) # Ensure budget is treated as float
+    # --- Step 4: First Pass - Greedy Allocation with Default Quantities ---
+    intermediate_shopping_list = {} # Use dict { item_id: item_details }
+    remaining_budget = float(user_budget)
 
+    print("--- Starting First Pass (Default Quantities) ---")
     for candidate in sorted_candidates:
-        cost = candidate['purchaseCost']
-        # Ensure item has a cost and fits within the remaining budget
-        if cost > 0 and cost <= remaining_budget:
-            # Format quantity with unit for the final list display
-            quantity_str = f"{candidate['purchaseQuantity']} {candidate['unit']}"
+        cost = candidate['costPerDefaultUnit']
+        if cost <= remaining_budget:
+            print(f"  Adding '{candidate['description']}' (Cost: {cost:.2f}, Value/Cost: {candidate['valuePerCost']:.2f})")
+            intermediate_shopping_list[candidate['id']] = {
+                "id": candidate['id'], "description": candidate['description'],
+                "unit": candidate['unit'], "unitprice": candidate['unitprice'],
+                "valuePerCost": candidate['valuePerCost'], # Store for sorting in second pass
+                "quantity": candidate['defaultPurchaseQuantity'], # Start with default qty (numeric)
+                "cost": cost, # Current total cost (numeric)
+                "reason": candidate['reason'],
+                "defaultPurchaseQuantity": candidate['defaultPurchaseQuantity'], # For increments
+                "costPerDefaultUnit": cost # For increments
+            }
+            remaining_budget -= cost
 
-            shopping_list.append({
-                "description": candidate['description'],
-                "quantity": quantity_str, # Display string including unit
-                "cost": round(cost, 2), # Round cost to 2 decimal places
-                "reason": candidate['reason'] # Include reason for context
-            })
-            remaining_budget -= cost # Deduct cost from budget
-        # else: # Optional: Log items that didn't fit budget
-             # print(f"Item '{candidate['description']}' (Cost: {cost:.2f}) did not fit remaining budget ({remaining_budget:.2f})")
+    print(f"--- First Pass Complete. Items: {len(intermediate_shopping_list)}. Remaining Budget: {remaining_budget:.2f} ---")
 
-    print(f"Generated shopping list with {len(shopping_list)} items. Remaining budget: {remaining_budget:.2f}")
-    return shopping_list
+    # --- Step 5: Second Pass - Increment Quantities (Revised Logic) ---
+    if remaining_budget > 0 and intermediate_shopping_list:
+        print("--- Starting Second Pass (Increment Quantities) ---")
+        # Get items currently in the list and sort them by value/cost to prioritize increments
+        items_in_list_for_increment = sorted(
+            list(intermediate_shopping_list.values()),
+            key=lambda x: x['valuePerCost'], # Prioritize incrementing high-value items first within each pass
+            reverse=True
+        )
+
+        # Loop passes as long as we successfully increment *something*
+        while True: # Keep looping through passes until no more increments are made
+            increment_made_in_this_pass = False
+            print(f"  Starting increment pass. Budget: {remaining_budget:.2f}")
+
+            for item in items_in_list_for_increment: # Try to increment each item in the sorted list
+                item_id = item['id']
+                # Ensure we're working with the latest data from the dictionary
+                current_item_data = intermediate_shopping_list[item_id]
+                increment_cost = current_item_data['costPerDefaultUnit']
+
+                # Check if adding one more default unit fits the budget
+                if increment_cost > 0 and increment_cost <= remaining_budget:
+                    print(f"    Incrementing '{current_item_data['description']}' (Cost: +{increment_cost:.2f}). Budget left: {remaining_budget - increment_cost:.2f}")
+
+                    # Update the item in the main dictionary
+                    current_item_data['quantity'] += current_item_data['defaultPurchaseQuantity']
+                    current_item_data['cost'] += increment_cost
+                    remaining_budget -= increment_cost
+                    increment_made_in_this_pass = True
+                    # Continue to the next item in the list for this pass
+
+            # If we completed a full pass through all items without making any increments, stop
+            if not increment_made_in_this_pass:
+                print("  No more increments fit the remaining budget in this pass.")
+                break # Exit the while loop
+
+        print(f"--- Second Pass Complete. Remaining Budget: {remaining_budget:.2f} ---")
+    else:
+         print("--- Skipping Second Pass (No remaining budget or empty initial list) ---")
+
+
+    # --- Step 6: Format Final List ---
+    final_shopping_list = []
+    final_items_sorted = sorted(list(intermediate_shopping_list.values()), key=lambda x: x['description']) # Sort alphabetically
+
+    for item in final_items_sorted:
+        quantity_str = f"{item['quantity']} {item['unit']}"
+        if item['unit'] in ['g', 'kg', 'ml', 'l'] and isinstance(item['quantity'], float) and not item['quantity'].is_integer():
+             quantity_str = f"{item['quantity']:.1f} {item['unit']}" # Format float quantities
+
+        final_shopping_list.append({
+            "description": item['description'],
+            "quantity": quantity_str, # Final display string
+            "cost": round(item['cost'], 2), # Final rounded cost
+            "reason": item['reason']
+        })
+
+    print(f"Final list has {len(final_shopping_list)} items.")
+    return final_shopping_list
