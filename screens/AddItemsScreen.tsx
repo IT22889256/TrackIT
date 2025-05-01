@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { auth, db } from '../firebaseConfig';
+import { collection, addDoc } from 'firebase/firestore';
 
 const AddItemsScreen = () => {
     const [itemName, setItemName] = useState('');
-    const [quantity, setQuantity] = useState(0);
+    const [quantity, setQuantity] = useState(1); // Default quantity to 1
     const [description, setDescription] = useState('');
-    const [addImage, setAddImage] = useState(false);
     const [itemNameError, setItemNameError] = useState('');
     const [quantityError, setQuantityError] = useState('');
 
     const navigation = useNavigation();
 
-    const handleAddItem = () => {
+    const handleAddItem = async () => {
         let isValid = true;
         setItemNameError('');
         setQuantityError('');
@@ -32,27 +33,38 @@ const AddItemsScreen = () => {
             return;
         }
 
-        const newItem = {
-            id: String(Date.now()),
-            name: itemName,
-            quantity: quantity,
-            description: description,
-            addImage: addImage,
-        };
+        if (auth.currentUser) {
+            try {
+                const newItem = {
+                    name: itemName,
+                    quantity: quantity,
+                    description: description,
+                    completed: false, // Default to not completed
+                    ownerId: auth.currentUser.uid, // Store the user's UID as ownerId
+                };
 
-        navigation.navigate('ShoppingList', { newItems: [newItem] }); // Send as an array
+                const docRef = await addDoc(collection(db, 'shoppingList'), newItem);
+                console.log('Item added with ID: ', docRef.id, ' by user: ', auth.currentUser.uid);
+                navigation.navigate('ShoppingList'); // Go back to the shopping list screen
+            } catch (error) {
+                console.error('Error adding item: ', error);
+                Alert.alert('Error', 'Failed to add item to the shopping list.');
+            }
+        } else {
+            Alert.alert('Authentication Error', 'User not logged in.');
+        }
     };
 
     const handleGoBack = () => {
-      navigation.navigate('ShoppingList'); // Navigate to HomeScreen
-  };
-  
+        navigation.navigate('ShoppingList');
+    };
+
     const incrementQuantity = () => {
         setQuantity((prevQuantity) => prevQuantity + 1);
     };
 
     const decrementQuantity = () => {
-        setQuantity((prevQuantity) => (prevQuantity > 0 ? prevQuantity - 1 : 0));
+        setQuantity((prevQuantity) => (prevQuantity > 1 ? prevQuantity - 1 : 1)); // Ensure quantity doesn't go below 1
     };
 
     return (
@@ -78,33 +90,16 @@ const AddItemsScreen = () => {
             <View style={styles.quantityContainer}>
                 <Text style={styles.label}>Quantity</Text>
                 <View style={styles.quantityControls}>
-                    <TouchableOpacity style={styles.quantityButton} onPress={incrementQuantity}>
-                        <Text style={styles.quantityButtonText}>+</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.quantityValue}>{quantity}</Text>
                     <TouchableOpacity style={styles.quantityButton} onPress={decrementQuantity}>
                         <Text style={styles.quantityButtonText}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.quantityValue}>{quantity}</Text>
+                    <TouchableOpacity style={styles.quantityButton} onPress={incrementQuantity}>
+                        <Text style={styles.quantityButtonText}>+</Text>
                     </TouchableOpacity>
                 </View>
                 {quantityError ? <Text style={styles.errorText}>{quantityError}</Text> : null}
             </View>
-
-            <View style={styles.addImageContainer}>
-                <Text style={styles.label}>Add Image</Text>
-                <Switch
-                    trackColor={{ false: '#767577', true: '#81b0ff' }}
-                    thumbColor={addImage ? '#f5dd4b' : '#f4f3f4'}
-                    ios_backgroundColor="#3e3e3e"
-                    onValueChange={setAddImage}
-                    value={addImage}
-                />
-            </View>
-
-            {addImage && (
-                <View style={styles.imagePlaceholder}>
-                    <Text>Image Placeholder</Text>
-                </View>
-            )}
 
             <View style={styles.descriptionContainer}>
                 <Text style={styles.label}>Description</Text>
@@ -118,7 +113,7 @@ const AddItemsScreen = () => {
             </View>
 
             <TouchableOpacity style={styles.doneButton} onPress={handleAddItem}>
-                <Text style={styles.doneButtonText}>Done</Text>
+                <Text style={styles.doneButtonText}>Add Item</Text>
             </TouchableOpacity>
         </View>
     );
@@ -188,22 +183,6 @@ const styles = StyleSheet.create({
         color: '#000',
         minWidth: 40,
         textAlign: 'center',
-    },
-    addImageContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 15,
-    },
-    imagePlaceholder: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 50,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 15,
-        backgroundColor: '#E8E8E8',
     },
     descriptionContainer: {
         marginBottom: 20,
