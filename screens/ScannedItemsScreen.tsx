@@ -258,10 +258,7 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
 
 
             <View style={styles.bottomButtonContainer}>
-                <TouchableOpacity style={[styles.actionButton, styles.manualButton]} onPress={() => navigation.navigate('ManuallyAddItem')}>
-                    <Ionicons name="create-outline" size={20} color="white" style={styles.buttonIcon} />
-                    <Text style={styles.buttonText}>Add Manually</Text>
-                </TouchableOpacity>
+                
 
                 <View style={{height: 10}} />
 
