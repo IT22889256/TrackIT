@@ -25,7 +25,11 @@ import Animated, {
     SlideOutUp,
     useSharedValue,
     useAnimatedStyle,
-    withTiming
+    withTiming,
+    SlideInLeft,
+    SlideOutLeft,
+    SlideInRight,
+    SlideOutRight
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -276,8 +280,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
                     {message && (
                         <Animated.View
-                            entering={SlideInDown.duration(300)}
-                            exiting={SlideOutUp.duration(300)}
+                            entering={SlideInRight.duration(300)}
+                            exiting={SlideOutRight.duration(300)}
                             style={[
                                 styles.messageContainer,
                                 message.type === 'error' && styles.error,
@@ -436,18 +440,22 @@ const styles = StyleSheet.create({
         marginLeft: 5,
     },
     messageContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        marginTop: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+    position: 'absolute',
+    top: 20,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1000,
     },
     messageIcon: {
         marginRight: 8,
