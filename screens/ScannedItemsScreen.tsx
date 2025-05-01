@@ -48,6 +48,7 @@ const ScannedItemsScreen: React.FC<Props> = ({ navigation, route }) => {
     const [itemMeasurementUnits, setItemMeasurementUnits] = useState<Record<string, MeasurementUnit>>(
         scannedItems.reduce((acc, item) => ({ ...acc, [item.id]: DEFAULT_UNIT }), {})
     );
+    
     const [loading, setLoading] = useState(false);
 
     const toggleCheckbox = (id: string) => {
