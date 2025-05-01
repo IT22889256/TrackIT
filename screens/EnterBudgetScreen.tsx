@@ -72,7 +72,7 @@ const EnterBudgetScreen: React.FC<Props> = ({ navigation }) => {
 
             // --- Call Backend API ---
             // !!! REPLACE WITH YOUR ACTUAL BACKEND URL !!!
-            const API_ENDPOINT = "http://192.168.8.159:5000/generate-shopping-list";
+            const API_ENDPOINT = "http://192.168.1.151:5000/generate-shopping-list";
             console.log(`Calling API: ${API_ENDPOINT} budget: ${numericBudget}, items: ${inventoryItems.length}`);
 
             const response = await fetch(API_ENDPOINT, {

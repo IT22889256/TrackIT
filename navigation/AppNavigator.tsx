@@ -12,6 +12,7 @@ import ReportsScreen from '@/screens/ReportScreen';
 import ReminderScreen from '@/screens/ReminderScreen';
 import LabelScan from '@/screens/LabelScan';
 import LabelManualEdit from '@/screens/LabelManualEdit';
+import EditExpiryItem from '@/screens/EditExpiryItem';
 
 
 import CameraScreen from '@/screens/CameraScreen';
@@ -58,6 +59,7 @@ export type RootStackParamList = {
   AddItems:undefined;
   BudgetList:undefined;
   EnterBudget: undefined;
+  EditExpiryItem: undefined;
   EditItems:undefined;
   ItemDetails:undefined;
   InventoryScreen:undefined;
@@ -92,6 +94,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Members" component={MembersScreen} options={{ headerShown: false }} />
         <Stack.Screen name="AddMember" component={AddMemberScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="EditExpiryItem" component={EditExpiryItem} options={{ headerShown: false }} />
         <Stack.Screen name="AddItems" component={AddItemsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="BudgetList" component={BudgetListScreen} options={{ headerShown: false }} />  
         <Stack.Screen name="EnterBudget" component={EnterBudgetScreen} options={{ headerShown: false }} />

@@ -3,7 +3,7 @@ import {
     View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
     Modal, Animated, Dimensions, Platform
 } from 'react-native';
-import { FontAwesome, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome, Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/AppNavigator';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -591,6 +591,12 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
                                         </View>
                                     )}
                                 </View>
+                                <TouchableOpacity 
+                                    style={styles.editButton} 
+                                    onPress={() => navigation.navigate('EditExpiryItem', { item })}
+                                >
+                                    <MaterialCommunityIcons name="pencil" size={20} color="#6200ea" />
+                                </TouchableOpacity>
                                 <TouchableOpacity onPress={() => toggleCheckbox(item.id)} style={styles.checkboxContainer}>
                                     <FontAwesome
                                         name={checkedItems[item.id] ? 'check-square' : 'square-o'}
@@ -616,10 +622,10 @@ const ReminderScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.buttonText}>Generate Report</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.addItemButton} onPress={() => navigation.navigate('LabelScan')}>
+            {/* <TouchableOpacity style={styles.addItemButton} onPress={() => navigation.navigate('LabelScan')}>
                 <Ionicons name="add-circle-outline" size={20} color="white" style={styles.buttonIcon} />
                 <Text style={styles.buttonText}>Add Item</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
         </View>
     );
 };
@@ -712,6 +718,10 @@ const styles = StyleSheet.create({
     },
     checkboxContainer: {
         paddingLeft: 10,
+    },
+    editButton: {
+        padding: 8,
+        marginRight: 5,
     },
     leftAction: {
         flex: 1,

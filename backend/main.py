@@ -3,10 +3,10 @@ import json
 import sys
 
 # Veryfi API credentials
-client_id = "vrfT9wsksPVUvZ42jrsON77abhjOGgW0PhsxjYb"
-client_secret = "RJjakEXgrCpAZDrSdmcapjNesWHUmVfg0VDDRB4Py8S23rSnneSxF8ekmxcmHbgKTNftimtjMDUAXbVDBRc4g6uu6EFij9Wa6ezz9Y3zIWSaFwY8hlzE0NrnrGWjoVfd"
-username = "stocktrack8"
-api_key = "ef0924c60fbf111c1bc9a3f8618f99fc"
+client_id = "vrfji7kW164OeOgDp7PMMOdlicksUagKoBO5W4Y"
+client_secret = "R75pyRIV0UmHwvu5D3SraOKbyIc7FOmefrGaH4r9U45zTv1SyJgyez8OKnrefEhfn9yeGuSHR8NkvpsFlYyaGWTfHJHcmiZz4YA3maY3osIZHGsT6hbb411xAxSpozcI"
+username = "favourites172"
+api_key = "3f42fbcb5c0b6543965c1694617deb48"
 
 # Initialize Veryfi client
 client = veryfi.Client(client_id, client_secret, username, api_key)

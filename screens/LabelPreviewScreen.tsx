@@ -47,7 +47,7 @@ const LabelPreviewSection: React.FC<Props> = ({ photo, handleRetakePhoto }) => {
             console.log('Download URL:', downloadURL);
 
             //get veryfi response
-            const apiResponse = await fetch('http://192.168.1.151:5000/expirydate', {
+            const apiResponse = await fetch('http://192.168.1.99:5000/expirydate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
