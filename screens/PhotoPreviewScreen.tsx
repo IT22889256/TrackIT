@@ -65,7 +65,7 @@ const PhotoPreviewSection: React.FC<Props> = ({ photo, handleRetakePhoto }) => {
             console.log('Download URL:', downloadURL);
 
             //get veryfi response
-            const apiResponse = await fetch('http://192.168.8.159:5000/upload', {
+            const apiResponse = await fetch('http:///192.168.1.159:5000/upload', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
