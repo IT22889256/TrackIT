@@ -198,6 +198,14 @@ const LabelManualEdit: React.FC<Props> = ({ navigation, route }) => {
                 </View> */}
             </View>
 
+              {/* New Scan Button */}
+              <TouchableOpacity
+                style={styles.scanButton}
+                onPress={() => navigation.navigate('LabelScan')}
+            >
+                <Text style={styles.scanButtonText}>Scan Label</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
                 style={styles.addButton}
                 onPress={handleAddItem}
@@ -205,13 +213,7 @@ const LabelManualEdit: React.FC<Props> = ({ navigation, route }) => {
                 <Text style={styles.addButtonText}>Add Item</Text>
             </TouchableOpacity>
 
-            {/* New Scan Button */}
-            <TouchableOpacity
-                style={styles.scanButton}
-                onPress={() => navigation.navigate('LabelScan')}
-            >
-                <Text style={styles.scanButtonText}>Scan New Label</Text>
-            </TouchableOpacity>
+          
         </View>
     );
 };

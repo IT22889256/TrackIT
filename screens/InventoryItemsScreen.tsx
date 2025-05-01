@@ -506,7 +506,7 @@ const InventoryItemsScreen: React.FC<Props> = ({ navigation }) => {
                 </TouchableOpacity>
 
                 {/* Footer */}
-                <Footer navigation={navigation} />
+                {/* <Footer navigation={navigation} /> */}
             </View>
         );
     }

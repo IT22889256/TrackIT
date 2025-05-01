@@ -1,9 +1,16 @@
 // LabelPreviewSection.tsx
+// LabelPreviewSection.tsx
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { CameraCapturedPicture } from 'expo-camera';
+import React, { useState } from 'react';
+import { TouchableOpacity, SafeAreaView, Image, StyleSheet, View, Text, Alert } from 'react-native';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../firebaseConfig';
+import * as ImageManipulator from 'expo-image-manipulator';
 import React, { useState } from 'react';
 import { TouchableOpacity, SafeAreaView, Image, StyleSheet, View, Text, Alert } from 'react-native';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -79,6 +86,7 @@ const LabelPreviewSection: React.FC<Props> = ({ photo, handleRetakePhoto }) => {
             {/* Go Back Button */}
             <TouchableOpacity style={styles.goBackButton} onPress={() => navigation.goBack()}>
                 <Ionicons name="arrow-back" size={24} color="black" />
+                <Ionicons name="arrow-back" size={24} color="black" />
             </TouchableOpacity>
 
             {/* Image Preview Box */}
@@ -87,6 +95,7 @@ const LabelPreviewSection: React.FC<Props> = ({ photo, handleRetakePhoto }) => {
             </View>
 
             {/* Upload Button */}
+            <TouchableOpacity style={styles.uploadButton} onPress={handleUpload}>
             <TouchableOpacity style={styles.uploadButton} onPress={handleUpload}>
                 <Text style={styles.uploadButtonText}>Upload</Text>
             </TouchableOpacity>
@@ -113,6 +122,7 @@ const styles = StyleSheet.create({
         width: '90%',
         height: '60%',
         backgroundColor: '#D3D3D3',
+        backgroundColor: '#D3D3D3',
         borderRadius: 15,
         justifyContent: 'center',
         alignItems: 'center',
@@ -124,6 +134,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     uploadButton: {
+        backgroundColor: '#6C63FF',
         backgroundColor: '#6C63FF',
         paddingVertical: 12,
         paddingHorizontal: 40,
